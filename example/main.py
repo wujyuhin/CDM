@@ -4,16 +4,16 @@ import json
 import pandas as pd
 import logging
 import tqdm
-from delta import Delta
-from gamma import Gamma
+from Qmodify.model.delta import Delta
+from Qmodify.model.gamma import Gamma
 
 logging.getLogger().setLevel(logging.INFO)
 from EduCDM import EMDINA as DINA
 
 # ============================ 数据准备  ====================================================
-q_m = np.loadtxt("../../data/math2015/simulation/simulation_q.csv", dtype=int, delimiter=',')  # Q矩阵
+q_m = np.loadtxt("../data/math2015/simulation/simulation_q.csv", dtype=int, delimiter=',')  # Q矩阵
 prob_num, know_num = q_m.shape[0], q_m.shape[1]  # 题目数、属性数
-R = np.array(pd.read_csv("../../data/math2015/simulation/simulation_data.csv", index_col=0))  #作答R矩阵
+R = np.array(pd.read_csv("../data/math2015/simulation/simulation_data.csv", index_col=0))  #作答R矩阵
 stu_num = R.shape[0]  # 学生数
 
 # ============================ delta法 ==================================
