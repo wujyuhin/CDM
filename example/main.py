@@ -26,3 +26,17 @@ modify_q_m2 = delta_model.modify_Q_inherit()
 # modify_q_m2 = gamma_model.modify_Q()
 '''
 
+def initial_all_knowledge_state(know_num):
+    state_num = 2 ** know_num
+    all_states = np.zeros((state_num, know_num))
+    for i in range(state_num):
+        k, quotient, residue = 1, i // 2, i % 2
+        while True:
+            all_states[i, know_num - k] = residue
+            if quotient <= 0:
+                break
+            quotient, residue = quotient // 2, quotient % 2
+            k += 1
+    return all_states
+
+a = initial_all_knowledge_state(3)
