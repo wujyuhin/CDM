@@ -1,7 +1,7 @@
 import numpy as np
 import itertools
+from scipy.stats import norm
 import numpy as np
-import pandas as pd
 
 """
 想要生成不同类型的Q矩阵
@@ -21,7 +21,7 @@ import pandas as pd
 """
 
 
-def attributepattern(skills):
+def attribute_pattern(skills):
     """
     基于k个属性生成2^k种掌握模式，返回除第一行外的所有模式（即去除全0模式）
     :param skills: 属性数量
@@ -39,7 +39,7 @@ def attributepattern(skills):
 
 
 # 指定只考察n个属性的考察模式
-def attributepattern_n(skills, n):
+def attribute_pattern_n(skills, n):
     """
     指定只考察n个属性的考察模式
     :param skills: 属性数量
@@ -75,7 +75,7 @@ def generate_Q(items, skills, probs: list = None):
      [1 1 1]]
     """
     if probs is None:
-        KS = attributepattern(skills)  # 生成所有可能的考察模式
+        KS = attribute_pattern(skills)  # 生成所有可能的考察模式
         Q = np.zeros((items, skills))  # 初始化Q矩阵，生成 items 行 K列的全0矩阵
         while np.any(np.sum(Q, axis=0) == 0):
             Q = KS[np.random.choice(np.arange(1, KS.shape[0]), items, replace=True), :]
@@ -86,17 +86,13 @@ def generate_Q(items, skills, probs: list = None):
         while np.any(np.sum(Q, axis=0) == 0):  # 当Q的任何一列存在0时进入循环，即Q中至少各个属性都有题目对应被考察到
             Q = []
             for k in range(1, skills + 1):  # 遍历所有属性
-                KS = attributepattern_n(skills, k)  # 例如：skills=3 k=2 返回：[[0 1 1] [1 0 1] [1 1 0]]
+                KS = attribute_pattern_n(skills, k)  # 例如：skills=3 k=2 返回：[[0 1 1] [1 0 1] [1 1 0]]
                 Q.append(KS[np.random.choice(np.arange(KS.shape[0]), int(probs[k - 1]), replace=True)])
             Q = np.concatenate(Q, axis=0)
     print(f"题目数量为{items}，属性数量为{skills},考察模式的概率为{probs}")
     print("生成的Q矩阵为：")
     print(Q)
     return Q
-
-
-import numpy as np
-import random
 
 
 def index_set(Q):
@@ -126,7 +122,7 @@ def index_set(Q):
     return {'set_0': set_0, 'set_1': set_1}
 
 
-def wrong_Q_rate(Q, wrong_rate:list or float):
+def wrong_Q_rate(Q, wrong_rate: list or float):
     """
     生成设定错误率的Q矩阵
     :param Q:  Q矩阵
@@ -204,112 +200,117 @@ def wrong_Q_rate(Q, wrong_rate:list or float):
         temp += 1
 
     # print("生成设定错误率的Q矩阵完成...\n", "--------------------------------------")
-    return {'Q': Q, 'Q_wrong': Q_wrong, 'is_wrong_10': is_wrong, 'wrong_set_01': wrong_set_01, 'wrong_set_10': wrong_set_10}
+    return {'Q': Q, 'Q_wrong': Q_wrong, 'is_wrong_10': is_wrong, 'wrong_set_01': wrong_set_01,
+            'wrong_set_10': wrong_set_10}
 
 
-import numpy as np
-from scipy.stats import norm
-import random
+def state_sample(states, num, method: str = None, mu_skills: int = None, sigma_skills: int = None,
+                 set_skills: int = None):
+    """
+    从掌握模式中抽样
+    :param states: ndarray,掌握模式 如[[0,1],[1,0],[1,1]]
+    :param num:  抽样数量
+    :param method:  抽样方法
+    :param mu_skills:  抽样均值，填写掌握是指点的个数，会自动压缩成标准正态分布的分位数
+    :param sigma_skills:  抽样方差
+    :param set_skills:  指定抽样的掌握模式中的知识点个数
+    :return:  ndarray 返回抽样结果
+
+    example1: 2个知识点，抽样3个
+    states = np.array([[0, 1], [1, 0], [1, 1]])
+    num = 3
+    method = "uniform"
+    result:
+    [[1 0]
+     [1 0]
+     [1 0]]
+
+    example2: 2个知识点，抽样3个,抽样方法为正态分布
+    states = np.array([[0, 1], [1, 0], [1, 1]])
+    num = 3
+    method = "normal"
+    mu_skills = 0
+    sigma_skills = 1
+    result:
+    [[1 0]
+     [1 1]
+     [1 0]]
+    """
+    if method is None:
+        return states[np.random.choice(states.shape[0], num, replace=True)]
+    elif method == "uniform":
+        return states[np.random.choice(states.shape[0], num, replace=True)]
+    elif method == "normal":
+        mode = norm.ppf(np.arange(1, states.shape[1] + 1) / (states.shape[1]))  # 将知识点id压缩成正态分布的分位数，如[1,2]压缩成[0,inf]
+        sigma = 1 if sigma_skills is None else sigma_skills
+        # 知识点id映射到正态分布的分位数，以只掌握一个知识点的情况为均值，实际上是均值是mode[0]
+        mu = 0 if (mu_skills is None) or mu_skills == 0 else mode[mu_skills - 1]
+        rs = np.random.normal(mu, sigma, num)  # 生成正态分布的随机数
+        # 返回考察知识点数量列表，如[1,2,1]，考察1个知识点的模式有两个，考察2个知识点的模式有一个
+        skills_num = np.array([np.where(x < mode)[0][0] + 1 for x in rs])  # 查找随机数属于考察多少个知识点的掌握模式
+        skills_set = set(skills_num)  # 对每种掌握情况抽样
+        states_sample = np.array([]).reshape(0, states.shape[1])  # 用于存储抽样结果
+        for i in skills_set:
+            states_i = states[
+                np.sum(states, axis=1) == i]  # 第i种模式数量，如Q = [[1,0],[0,1],[1,1]],i=1,则states_i=[[1,0],[0,1]]
+            N = len(np.where(skills_num == i)[0])  # 对第i中模式抽样的数量
+            states_sample = np.concatenate(
+                [states_sample, states_i[np.random.choice(states_i.shape[0], N, replace=True)]], axis=0)  # 对第i中模式抽样
+        return states_sample
+    elif method == "assign":
+        if set_skills is None:
+            raise ValueError("set_skills is None")
+        states_i = states[np.sum(states, axis=1) == set_skills]
+        return states_i[np.random.choice(states_i.shape[0], num, replace=True)]
+    else:
+        raise ValueError("method should be 'uniform' or 'normal' or 'assign'")
 
 
-def sim_ORP_GDINA(P, num, Q, model, distribute):
-    # 该方法基于输入的参数生成一个model
-
-    # R语言中的cat()输出在这里替换为print()，便于在Python中展示
-    # print("模型生成中...")
-    # print(f"被试属性分布模式： {distribute}")
-    # print(f"模型： {model}")
-    # print(f"属性个数: {Q.shape[1]}")
-    # print(f"题目个数: {Q.shape[0]}")
-    # print(f"题目和属性个数之比: {Q.shape[0] / Q.shape[1]}")
-    # print(f"被试数量: {num}")
-    # print(f"题目质量的参数,g和s从该范围取值: Iq = [{P[0]}, {P[1]}]")  # 应该是题目质量
-
-    gs = np.zeros((Q.shape[0], 2))  # 生成题目数行，2列的全0矩阵，用于存储各题的guess和slip参数
-    gs[:, 0] = np.random.uniform(P[0], P[1], Q.shape[0])  # 在P[0]-P[1]之间随机生成数字填充gs的第一列
-    gs[:, 1] = np.random.uniform(P[0], P[1], Q.shape[0])  # 在P[0]-P[1]之间随机生成数字填充gs的第二列
-
-    ORP_GDINA = None
-
-    if distribute == "mvnorm.random" or distribute == "mvnorm":
-        sigma = 0.5
-        K = Q.shape[1]  # 属性个数
-        cutoffs = norm.ppf(np.arange(1, K + 1) / (K + 1))  # 生成正态分布的分位数
-        if distribute == "mvnorm.random":
-            cutoffs = norm.ppf(np.random.uniform(1 / (K + 1), K / (K + 1), K))  # 生成随机的正态分布的分位数
-
-        # print(f"sigma: {sigma}")
-        # print(f"cutoffs: {cutoffs}")
-
-        m = np.zeros(K)
-        vcov = np.eye(K) * sigma
-        ORP_GDINA = simGDINA(num, Q, gs_parm=gs, model=model, att_dist="mvnorm",
-                             mvnorm_parm={"mean": m, "sigma": vcov, "cutoffs": cutoffs})
-
-    elif distribute == "higher.order":
-        theta = np.random.normal(size=num)
-        lambda_ = pd.DataFrame({"a": np.random.uniform(1, 2, K),
-                                "b": np.linspace(-1.5, 1.5, K)})
-        ORP_GDINA = simGDINA(num, Q, gs_parm=gs, model=model, att_dist="higher.order",
-                             higher_order_parm={"theta": theta, "lambda": lambda_})
-
-    elif distribute == "uniform":
-        ORP_GDINA = simGDINA(num, Q, gs_parm=gs, model=model)  # gs参数控制题目难度，即各题的guess和slip参数
-
-    # print("模型生成完成\n", "--------------------------------------")
-    return ORP_GDINA
+def state_answer(state, Q):
+    """ 根据掌握模式与Q矩阵生成作答矩阵R
+    输入掌握模式 1*skills 输出items道题目回答1*items
+    :param state: 每一种掌握模式 1*skills [0,1,0,1]
+    :param Q:  Q矩阵 items*skills
+    :return: 返回items道题目回答1*items
+    """
+    answers = []
+    for item in range(Q.shape[0]):
+        if sum(np.array(state) >= np.array(Q[item, :])) == len(state):
+            answers.append(1)
+        else:
+            answers.append(0)
+    return np.array(answers)
 
 
-def sim_data_one(K, J, N, distribute, P, model, Q_method):
-    Q = generate_Q(K, J, Q_method)
-    ORP_GDINA = sim_ORP_GDINA(P, N, Q, model, distribute)
-    LCprob_parm = ORP_GDINA["LCprob_parm"].T  # 该变量是每行为一个题目，每列为一种掌握模式，指：对于每个题目，各种掌握模式答对的概率
-    return {"Q": Q, "model": model, "LCprob_parm": LCprob_parm, "P": P, "ORP": ORP_GDINA}
-
-
-
-
-
-def sim_data(data_size, K, P, distribute, model, N_range, JK_range, Q_method):
-    # data_size
-    # K表示题目考察的属性个数
-    # P表示用于控制题目质量的参数
-    # distribute表示被试的属性掌握模式，默认均匀分布
-    # model模型，我们应该要用DINA
-    # N表示被试数量
-    # JK表示题目和属性数量之比
-    # Q_method表示Q矩阵的生成方法，完全随机/存在单位矩阵
-
-    KS = attributepattern(K)  # 生成所有类型的掌握模式比如k=2个属性，则生成[0 0,1 0,0 1,1 1]矩阵
-    L = len(KS)  # 获取KS的长度,其实就是2^k
-    Pattern = []
-    data_set = pd.DataFrame()
-    Q = None
-
-    for data_num in range(1, data_size + 1):
-        # print(f"--------------------- {data_num} ---------------------")
-
-        N_cur = int(np.round(np.random.uniform(N_range[0], N_range[1])))  # runif生成随机数，并四舍五入到整数
-        J_cur = int(np.round(np.random.uniform(K * JK_range[0], K * JK_range[1])))  # 生成随机整数
-
-        data = sim_data_one(K, J_cur, N_cur, distribute, P, model, Q_method)
-        data_set = pd.concat([data_set, data], axis=1)
-
-    return data_set
-
-
+# 对作答矩阵进行修正
+def wrong_R_rate(R, wrong_rate):
+    result = wrong_Q_rate(R, wrong_rate)
+    return {'R': R, 'R_wrong': result['Q_wrong'], 'is_wrong_10': result['is_wrong_10'],
+            'wrong_set_01': result['wrong_set_01'],'wrong_set_10': result['wrong_set_10']}
 
 
 if __name__ == '__main__':
     # 生成Q矩阵
     np.random.seed(0)
-    skills = 3
+    skills = 4
     items = 10
-    probs = [0.5, 0.4, 0.1]
+    students = 20
+    probs = [0.5, 0.4, 0.05, 0.05]
+    wrong = [0.2, 0.2]
     Q = generate_Q(items, skills, probs)
     # 运行sim_wrong_q_rate函数
-    wrong = 0.2
-    result = wrong_Q_rate(Q, wrong)
-    print(result['Q_wrong'])
 
-    sim_data_one(3, 10, 100, "uniform", [0.2, 0.8], "GDINA", [0.3, 0.5, 0.2])
+    result = wrong_Q_rate(Q, wrong)
+    # print(result['Q_wrong'])
+    # print(result['is_wrong_10'])
+    # print(result['wrong_set_01'])
+
+    # cdm = DINA(self.R, modify_q_m, self.stu_num, self.prob_num, self.know_num, skip_value=-1)
+    # answer = np.apply_along_axis(state_answer, 1, A, A)  # 生成每种掌握模式下的答案 2^k-1 * 2^k-1
+    # 应该加一行掌握模式全为0的答案
+    # 生成掌握模式
+    states_samples = state_sample(states=attribute_pattern(skills), num=students, method="normal", mu_skills=1,
+                                  sigma_skills=1, set_skills=1)  # 从掌握模式中抽样
+    # 根据掌握模式、Q矩阵生成答案
+    answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 把arr中的每种模式都回答Q矩阵题目
+    wrong_R_rate(answer, 0.1)

@@ -4,8 +4,8 @@ import json
 import pandas as pd
 import logging
 import tqdm
-from Qmodify.model.delta import Delta
-from Qmodify.model.gamma import Gamma
+from code_functions.model.delta import Delta
+from code_functions.model.gamma import Gamma
 
 logging.getLogger().setLevel(logging.INFO)
 from EduCDM import EMDINA as DINA
