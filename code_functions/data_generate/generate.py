@@ -80,7 +80,7 @@ def generate_Q(items, skills, probs: list = None):
         while np.any(np.sum(Q, axis=0) == 0):
             Q = KS[np.random.choice(np.arange(1, KS.shape[0]), items, replace=True), :]
     else:
-        probs = np.array(probs) * items  # 将probs转换为数量
+        probs = (np.array(probs)/np.sum(np.array(probs))) * items  # 将probs转换为数量
         probs[-1] = items - np.sum(probs[:-1])  # 最后一个属性的数量为总数减去前面属性的数量
         Q = np.zeros((items, skills))  # 初始化Q矩阵，生成 items 行 K列的全0矩阵
         while np.any(np.sum(Q, axis=0) == 0):  # 当Q的任何一列存在0时进入循环，即Q中至少各个属性都有题目对应被考察到
@@ -122,7 +122,7 @@ def index_set(Q):
     return {'set_0': set_0, 'set_1': set_1}
 
 
-def wrong_Q_rate(Q, wrong_rate: list or float):
+def generate_wrong_Q(Q, wrong_rate: list or float):
     """
     生成设定错误率的Q矩阵
     :param Q:  Q矩阵
@@ -200,7 +200,7 @@ def wrong_Q_rate(Q, wrong_rate: list or float):
         temp += 1
 
     # print("生成设定错误率的Q矩阵完成...\n", "--------------------------------------")
-    return {'Q': Q, 'Q_wrong': Q_wrong, 'is_wrong_10': is_wrong, 'wrong_set_01': wrong_set_01,
+    return {'Q': Q, 'Q_wrong': Q_wrong, 'is_wrong': is_wrong, 'wrong_set_01': wrong_set_01,
             'wrong_set_10': wrong_set_10}
 
 
@@ -283,9 +283,9 @@ def state_answer(state, Q):
 
 
 # 对作答矩阵进行修正
-def wrong_R_rate(R, wrong_rate):
-    result = wrong_Q_rate(R, wrong_rate)
-    return {'R': R, 'R_wrong': result['Q_wrong'], 'is_wrong_10': result['is_wrong_10'],
+def generate_wrong_R(R, wrong_rate):
+    result = generate_wrong_Q(R, wrong_rate)
+    return {'R': R, 'R_wrong': result['Q_wrong'], 'is_wrong': result['is_wrong'],
             'wrong_set_01': result['wrong_set_01'],'wrong_set_10': result['wrong_set_10']}
 
 
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     Q = generate_Q(items, skills, probs)
     # 运行sim_wrong_q_rate函数
 
-    result = wrong_Q_rate(Q, wrong)
+    result = generate_wrong_Q(Q, wrong)
     # print(result['Q_wrong'])
     # print(result['is_wrong_10'])
     # print(result['wrong_set_01'])
@@ -313,4 +313,4 @@ if __name__ == '__main__':
                                   sigma_skills=1, set_skills=1)  # 从掌握模式中抽样
     # 根据掌握模式、Q矩阵生成答案
     answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 把arr中的每种模式都回答Q矩阵题目
-    wrong_R_rate(answer, 0.1)
+    generate_wrong_R(answer, 0.1)

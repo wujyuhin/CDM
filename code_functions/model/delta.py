@@ -11,6 +11,16 @@ from EduCDM import EMDINA as DINA
 
 class Delta():
     def __init__(self, q_m, R, stu_num, prob_num, know_num, mode='inherit', epsilon=0.05):
+        """
+        delta方法
+        :param q_m: Q矩阵
+        :param R:  学生作答矩阵R
+        :param stu_num:  学生数
+        :param prob_num:  题目数
+        :param know_num:  知识点数
+        :param mode:  'inherit' or 'dependence' 边发现Q问题边改 or 最后统一改每道题的Q矩阵
+        :param epsilon:  delta法误差
+        """
         self.q_m = q_m
         self.R = R
         self.stu_num = stu_num
@@ -26,6 +36,12 @@ class Delta():
         :param CDM: 经过EduCDM中的DINA训练的cdm模型实例
         :param item: 第j道题目
         :return:  返回第j道题目的delta
+
+        example:
+        from EduCDM import EMDINA as DINA
+        cdm = DINA(R, q_m, stu_num, prob_num, know_num, skip_value=-1)
+        cdm.train(epoch=2, epsilon=1e-3)
+        delta(cdm, item=0)
         """
         # item:第j道题目
         # cdm模型对象
@@ -37,9 +53,13 @@ class Delta():
     def generate_q_state(self, nums: list):
         """
         生成所有q向量的情况，例如如果Q矩阵是4维，输入的nums=[1,3]，
-        则生成的q向量是[0,1,0,1]的所有情况有[1,0,0,1]、[0,1,1,1]
+        则生成的q向量是[0,1,0,1]的所有情况有[1,1,0,1]、[0,1,1,1]
         :param nums: 已经确定的属性如已确定第1、3个属性为1，则nums=[1,3]
         :return: 返回所有q向量的情况：nparray([[1,0,0,1],[0,1,1,1]])
+
+        example:nums= [1,3]
+        generate_q_state(nums)
+        result:array([[1, 1, 0, 1],[0, 1, 1, 1]])
         """
         nums_list = nums.copy()
         # q_m Q矩阵
@@ -62,6 +82,10 @@ class Delta():
         :param item: 第j道题目
         :param one_q: 是定修改的q向量
         :return:  返回delta
+
+        example:
+        cal_delta(item=0, one_q=[1,0,0])
+        return delta法中的delta=1-g-s
         """
         # q_m Q矩阵
         # 第j道题目
