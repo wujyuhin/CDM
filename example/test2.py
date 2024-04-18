@@ -8,8 +8,8 @@ from code_functions.model.delta import Delta
 from code_functions.model.gamma import Gamma
 
 logging.getLogger().setLevel(logging.INFO)
-from EduCDM import EMDINA as DINA
-
+# from EduCDM import EMDINA as DINA
+from code_functions.EduCDM import EMDINA as DINA
 
 # ============================  加减法数据  ====================================================
 # 数据准备
