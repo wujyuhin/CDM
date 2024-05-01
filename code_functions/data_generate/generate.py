@@ -82,16 +82,30 @@ def generate_Q(items, skills, probs: list = None):
             Q = KS[np.random.choice(np.arange(1, KS.shape[0]), items, replace=True), :]
     else:
         probs = (np.array(probs) / np.sum(np.array(probs))) * items  # 将probs转换为数量
-        probs[-1] = items - np.sum(probs[:-1])  # 最后一个属性的数量为总数减去前面属性的数量
+        probs = np.round(probs).astype(int)  # 将probs转换为整数
+        # 如果probs的和大于items，则随机选一个有数的减到和为items
+        if sum(probs) > items:
+            while sum(probs) != items:
+                index = np.random.choice(range(len(probs)))
+                if probs[index] > 0:
+                    probs[index] -= 1
+        if sum(probs) < items:
+            while sum(probs) != items:
+                index = np.random.choice(range(len(probs)))
+                probs[index] += 1
         Q = np.zeros((items, skills))  # 初始化Q矩阵，生成 items 行 K列的全0矩阵
         while np.any(np.sum(Q, axis=0) == 0):  # 当Q的任何一列存在0时进入循环，即Q中至少各个属性都有题目对应被考察到
-            Q = []
+            Q_mode = []
             for k in range(1, skills + 1):  # 遍历所有属性
                 KS = attribute_pattern_n(skills, k)  # 例如：skills=3 k=2 返回：[[0 1 1] [1 0 1] [1 1 0]]
-                Q.append(KS[np.random.choice(np.arange(KS.shape[0]), int(probs[k - 1]), replace=True)])
-            Q = np.concatenate(Q, axis=0)
+                Q_mode.append(KS[np.random.choice(np.arange(KS.shape[0]), int(probs[k - 1]), replace=True)])  # 生成考察k个属性的模式
+            Q = np.concatenate(Q_mode, axis=0)
     print(f"题目数量为{items}，属性数量为{skills},考察模式的概率为{probs}")
     print("生成的Q矩阵为：")
+    for i in range(Q.shape[1]):
+        print(f"考察{i+1}个知识点的有{sum(np.sum(Q, axis=1) == i+1)}个")
+    # print("考察2个知识点的有", sum(np.sum(Q, axis=1) == 2), "个")
+    # print("考察3个知识点的有", sum(np.sum(Q, axis=1) == 3), "个")
     print(Q)
     return Q
 
@@ -270,7 +284,11 @@ def expand_to_center(skills_num:int, specified_value:int):
     将指定的值扩展到中间
     :param skills_num: 知识点个数 1,2,3,4...
     :param specified_value: 指定考察的知识点个数 1,2,3,4...
-    :return:
+    :return: 返回扩展到中间的长度
+
+    example:
+    expand_to_center(4,1)
+    return 7
     """
     natrue_list = list(range(skills_num+1))  # 生成自然数列表 [0,1,2,3,4]
     index = natrue_list.index(specified_value)  # 指定值的索引
@@ -288,7 +306,7 @@ def state_sample(states, num, method: str = None, mu_skills: int = None, sigma_s
     从掌握模式中抽样
     :param states: ndarray,掌握模式 如[[0,1],[1,0],[1,1]]
     :param num:  抽样数量
-    :param method:  抽样方法
+    :param method:  抽样方法,uniform_mode:均匀分布,uniform_skill:根据掌握知识点的模式，对每种模式均匀抽样,normal:正态分布
     :param mu_skills:  抽样均值，填写掌握是指点的个数，会自动压缩成标准正态分布的分位数,type:int,example:1,2,3...
     :param sigma_skills:  抽样方差
     :param set_skills:  指定抽样的掌握模式中的知识点个数
@@ -316,35 +334,88 @@ def state_sample(states, num, method: str = None, mu_skills: int = None, sigma_s
     """
     if method is None:
         return states[np.random.choice(states.shape[0], num, replace=True)]
-    elif method == "uniform":
+    elif method == "uniform_mode":
+        # 根据掌握模式均匀抽样
         return states[np.random.choice(states.shape[0], num, replace=True)]
+    elif method == "uniform_skill":
+        # 根据掌握知识点的模式，对知识点数量，进行均匀抽样
+        skills_lists = np.random.randint(0,states.shape[1]+1, num)  # 共6个skills,若skills_list=[0,1,2,3]表示抽样只抽掌握了0,1,2,3个知识点的模式
+        skills_list = list(set(skills_lists))  # 抽样的掌握知识点的模式
+        states_sample = np.array([]).reshape(0, states.shape[1])
+        for i in skills_list:
+            N = len(np.where(skills_lists == i)[0])  # 对第i中模式抽样的数量
+            states_i = states[np.sum(states, axis=1) == i]
+            states_sample = np.concatenate(
+                [states_sample, states_i[np.random.choice(states_i.shape[0], N, replace=True)]], axis=0)
+        return states_sample
     elif method == "normal":
         # mu_skills=1,表示掌握1个知识点
         # 将指定的知识点掌握模式放到中间，例如4个知识点，指定均值为掌握1个知识点，则面积有7块，加上正无穷，正态分位点有7个
         # 这7个分为点对应的掌握知识点数量分别为[0,0,0,1,2,3,4]，可以看出均值是1
         skills_n = states.shape[1]  # 知识点数量
-
         # 根据均值和掌握的知识点类型，确定分位数
-        length = expand_to_center(skills_n, mu_skills)  # 将指定的知识点扩展到中间时，总长度 # 生成l块面积，l-1个分位数
-        mode = np.concatenate((norm.ppf(np.arange(1,length)/length),1e10),axis=None)  # 加上无穷大，这样每块面积都对应一个分位数
-        mode_to_skill = np.array(list(np.zeros((1,len(mode)-skills_n-1))[0])+list(range(skills_n+1))) # [0,0]+[0,1,2,3,4]
+        if mu_skills<0 and isinstance(mu_skills,int):
+            raise ValueError("mu_skills should be int and greater than 0")
+        else:
+            mu_skills = 1 if mu_skills is None else mu_skills
+        length = expand_to_center(skills_n, mu_skills)  # [0,1,2,3,4]将指定的知识点1作为均值时，扩展序列的长度[0,0,0,1,2,3,4]为7
+        # 生成指定方差为2的正态分布的分位数
+        mode = np.concatenate((norm.ppf(np.arange(1,length)/length),1e10),axis=None)
+        if mu_skills <= skills_n/2:
+            # [0,0]+[0,1,2,3,4]
+            mode_to_skill = np.array(list(np.zeros((1, len(mode) - skills_n - 1))[0]) + list(range(skills_n + 1)))
+        else:
+            # [0,1,2,3,4]+[0,0]
+            mode_to_skill = np.array(list(range(skills_n + 1)) + list(np.zeros((1, len(mode) - skills_n - 1))[0]))
+        # 加上无穷大，这样每块面积都对应一个分位数
 
         sigma = 1 if sigma_skills is None else sigma_skills  # 指定正态分布的方差，默认为1
-        rs = np.random.normal(0, sigma, num)  # 生成正态分布的随机数
-        # 查找rs中随机数属于 考察多少个知识点的掌握模式，返回列表如skills_num = [1,2,1]，考察1个知识点的模式有两个，考察2个知识点的模式有一个
-        skills_num = np.array([mode_to_skill[np.where(x <= mode)[0][0]] for x in rs])
-        skills_set = set(skills_num)  # 考察知识点数量的种类
-        states_sample = np.array([]).reshape(0, states.shape[1])  # 用于存储抽样结果
-        for i in skills_set:
-            if int(i) == 0:
-                # 第i中模式数量，若i=0,Q = [[1,0],[0,1],[1,1]],则states_i=[[0,0]]
-                states_i = np.array([[0] * skills_n])
+
+        # rs = np.random.normal(0, sigma, num)  # 生成正态分布的随机数
+        #
+        # # 查找rs中随机数属于 考察多少个知识点的掌握模式，返回列表如skills_num = [1,2,1]，考察1个知识点的模式有两个，考察2个知识点的模式有一个
+        # skills_num = np.array([mode_to_skill[np.where(x <= mode)[0][0]] for x in rs])
+        # skills_set = set(skills_num)  # 考察知识点数量的种类
+        # states_sample = np.array([]).reshape(0, states.shape[1])  # 用于存储抽样结果
+        # for i in skills_set:
+        #     if int(i) == 0:
+        #         # 第i中模式数量，若i=0,Q = [[1,0],[0,1],[1,1]],则states_i=[[0,0]]
+        #         states_i = np.array([[0] * skills_n])
+        #     else:
+        #         # 第i种模式数量，如Q = [[1,0],[0,1],[1,1]],i=1,则states_i=[[1,0],[0,1]]
+        #         states_i = states[np.sum(states, axis=1) == i]
+        #     N = len(np.where(skills_num == i)[0])  # 对第i中模式抽样的数量
+        #     states_sample = np.concatenate(
+        #         [states_sample, states_i[np.random.choice(states_i.shape[0], N, replace=True)]], axis=0)  # 对第i中模式抽样
+
+        # 应该截断抽样，[0,0,1,2,3]随机数应该只抽到后面四位，第一个的0不应该抽到,不然就不符合正态分布
+        i = np.where(np.random.normal(0, sigma) <= mode)[0][0]
+        temp = 0
+        # 确定考察不同知识点的掌握模式分别有多少个,如抽2个掌握2个知识点的，抽4个掌握1个知识点的...
+        skills_num = []
+        while temp < num:
+            if mu_skills <= skills_n / 2:
+                # [0,0,0,1,2,3,4] 这种情况应该抽样忽略前两个0
+                if i < len(mode_to_skill) - skills_n - 1:  # [0,0,0,1,2,3,4]排除除[0,1,2,3,4]外的前2个
+                    i = np.where(np.random.normal(0, sigma) <= mode)[0][0]
+                    continue
             else:
-                # 第i种模式数量，如Q = [[1,0],[0,1],[1,1]],i=1,则states_i=[[1,0],[0,1]]
-                states_i = states[np.sum(states, axis=1) == i]
-            N = len(np.where(skills_num == i)[0])  # 对第i中模式抽样的数量
+                # [0,1,2,3,4,0,0] 这种情况应该抽样忽略后两个0
+                if i >= skills_n + 1:
+                    i = np.where(np.random.normal(0, sigma) <= mode)[0][0]
+                    continue
+            skills_num.append(i)
+            i = np.where(np.random.normal(0, sigma) <= mode)[0][0]
+            temp += 1
+        # 根据抽样的掌握模式数量，直接抽样
+        skills_list = mode_to_skill[list(set(skills_num))]  # 共6个skills,若skills_list=[1,2,3]表示抽样只抽掌握了1,2,3个知识点的模式
+        states_sample = np.array([]).reshape(0, states.shape[1])  # 用于存储抽样结果
+        for j in skills_list:
+            # 第i种模式数量，如Q = [[1,0],[0,1],[1,1]],i=1,则states_i=[[1,0],[0,1]]
+            states_j = states[np.sum(states, axis=1) == j]
+            N = len(np.where(mode_to_skill[skills_num] == j)[0])
             states_sample = np.concatenate(
-                [states_sample, states_i[np.random.choice(states_i.shape[0], N, replace=True)]], axis=0)  # 对第i中模式抽样
+                [states_sample, states_j[np.random.choice(states_j.shape[0], N, replace=True)]], axis=0)  # 对第i中模式抽样
         return states_sample
     elif method == "assign":
         if set_skills is None:
@@ -389,10 +460,10 @@ def generate_wrong_R(R, wrong_rate):
 if __name__ == '__main__':
     # 生成Q矩阵
     np.random.seed(0)
-    skills = 4
-    items = 10
-    students = 20
-    probs = [0.5, 0.4, 0.05, 0.05]
+    skills = 6
+    items = 15
+    students = 100
+    probs = [0.5, 0.4, 0.1, 0, 0, 0]
     wrong = [0.2, 0.2]
     Q = generate_Q(items, skills, probs)
     # 运行sim_wrong_q_rate函数
@@ -405,8 +476,28 @@ if __name__ == '__main__':
     # cdm = DINA(self.R, modify_q_m, self.stu_num, self.prob_num, self.know_num, skip_value=-1)
     # answer = np.apply_along_axis(state_answer, 1, A, A)  # 生成每种掌握模式下的答案 2^k-1 * 2^k-1
     # 应该加一行掌握模式全为0的答案
-    # 生成掌握模式
-    states_samples = state_sample(states=attribute_pattern(skills), num=students, method="normal", mu_skills=1,sigma_skills=0.1, set_skills=1)  # 从掌握模式中抽样
+    # 生成掌握模式，掌握模式应该比Q矩阵多一行全0的模式
+    # 正态分布抽样
+    states = np.concatenate((np.zeros((1,skills)),attribute_pattern(skills)))
+    states_samples = state_sample(states, num=students, method="normal", mu_skills=5,sigma_skills=0.7)  # 从掌握模式中抽样
+    print("===== 正态分布抽样 =====")
+    for i in range(states.shape[1]):
+        print(f"正态掌握{i}个知识点的有{sum(np.sum(states_samples, axis=1) == i)}个")
+    # 指定抽样
+    states_samples2 = state_sample(states, num=students, method="assign",set_skills=2)  # 从掌握模式中抽样
+    print("===== 指定抽样 =====")
+    for i in range(states.shape[1]):
+        print(f"掌握{i}个知识点的有{sum(np.sum(states_samples2, axis=1) == i)}个")
+    # 按全模式进行均匀分布抽样
+    states_samples3 = state_sample(states, num=students, method="uniform_mode")  # 从掌握模式中抽样
+    print("===== 全模式均匀分布抽样 =====")
+    for i in range(states.shape[1]):
+        print(f"掌握{i}个知识点的有{sum(np.sum(states_samples3, axis=1) == i)}个")
+    # 按掌握知识点进行均匀分布抽样
+    states_samples4 = state_sample(states, num=students, method="uniform_skill")  # 从掌握模式中抽样
+    print("===== 知识点均匀分布抽样 =====")
+    for i in range(states.shape[1]):
+        print(f"掌握{i}个知识点的有{sum(np.sum(states_samples4, axis=1) == i)}个")
     # 根据掌握模式、Q矩阵生成答案
     answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 把arr中的每种模式都回答Q矩阵题目
     generate_wrong_R(answer, 0.1)
