@@ -75,9 +75,9 @@ def FPR(Qright, Qwrong, Qmodify):
     # 先循环Q矩阵的行和列，如果Q矩阵的元素与当前Q矩阵的元素不相等，且是错误元素，则FPR_right+1
     for i in range(Qright.shape[0]):
         for j in range(Qright.shape[1]):
-            if Qright[i, j] != Qmodify[i, j] and isWrong[i, j] == 1:
+            if Qright[i, j] == Qmodify[i, j] and isWrong[i, j] == 1:
                 # isWrong[i, j] == 1 表示是错误元素,即看到的Q[i,j]不是真实的Q[i,j]
-                # Qright[i, j] != Qmodify[i, j] 表示当前的Q[i,j]是错误的
+                # Qright[i, j] == Qmodify[i, j] 表示当前的Q[i,j]修改正确
                 FPR_right += 1
     return FPR_right / np.sum(isWrong)
 

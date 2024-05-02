@@ -20,7 +20,20 @@ import numpy as np
 按概率生成上述q向量，如考察一个属性的q向量的概率为0.3，考察两个属性的q向量的概率为0.5，考察三个属性的q向量的概率为0.2
 """
 
-
+# def initial_all_knowledge_state(know_num):
+#     state_num = 2 ** know_num
+#     all_states = np.zeros((state_num, know_num))
+#     for i in range(state_num):
+#         k, quotient, residue = 1, i // 2, i % 2
+#         while True:
+#             all_states[i, know_num - k] = residue
+#             if quotient <= 0:
+#                 break
+#             quotient, residue = quotient // 2, quotient % 2
+#             k += 1
+#     return all_states
+#
+# a = initial_all_knowledge_state(3)
 def attribute_pattern(skills):
     """
     基于k个属性生成2^k-1种掌握模式，返回除第一行外的所有模式（即去除全0模式）
@@ -100,13 +113,13 @@ def generate_Q(items, skills, probs: list = None):
                 KS = attribute_pattern_n(skills, k)  # 例如：skills=3 k=2 返回：[[0 1 1] [1 0 1] [1 1 0]]
                 Q_mode.append(KS[np.random.choice(np.arange(KS.shape[0]), int(probs[k - 1]), replace=True)])  # 生成考察k个属性的模式
             Q = np.concatenate(Q_mode, axis=0)
-    print(f"题目数量为{items}，属性数量为{skills},考察模式的概率为{probs}")
-    print("生成的Q矩阵为：")
-    for i in range(Q.shape[1]):
-        print(f"考察{i+1}个知识点的有{sum(np.sum(Q, axis=1) == i+1)}个")
+    # print(f"题目数量为{items}，属性数量为{skills},考察模式的概率为{probs}")
+    # print("生成的Q矩阵为：")
+    # for i in range(Q.shape[1]):
+    #     print(f"考察{i+1}个知识点的有{sum(np.sum(Q, axis=1) == i+1)}个")
     # print("考察2个知识点的有", sum(np.sum(Q, axis=1) == 2), "个")
     # print("考察3个知识点的有", sum(np.sum(Q, axis=1) == 3), "个")
-    print(Q)
+    # print(Q)
     return Q
 
 
@@ -467,7 +480,6 @@ if __name__ == '__main__':
     wrong = [0.2, 0.2]
     Q = generate_Q(items, skills, probs)
     # 运行sim_wrong_q_rate函数
-
     result = generate_wrong_Q(Q, wrong)
     # print(result['Q_wrong'])
     # print(result['is_wrong_10'])

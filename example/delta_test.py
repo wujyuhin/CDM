@@ -27,12 +27,14 @@ model1 = DINA(R, modify_q_m1, stu_num, prob_num, know_num, skip_value=-1)
 model1.train(epoch=2, epsilon=0.05)
 model2 = DINA(R, modify_q_m2, stu_num, prob_num, know_num, skip_value=-1)
 model2.train(epoch=2, epsilon=0.05)
+model3 = DINA(R, q_m, stu_num, prob_num, know_num, skip_value=-1)
+model3.train(epoch=2, epsilon=0.05)
 
 print('边发现边修改Q矩阵估计的平均guess参数：',sum(model1.guess)/len(model1.guess))
 print('发现完所有的再修改Q矩阵估计的平均guess参数：',sum(model2.guess)/len(model2.guess))
+print('原本Q矩阵估计的平均guess参数：',sum(model3.guess)/len(model3.guess))
 
 
 print('边发现边修改Q矩阵估计的平均slip参数：',sum(model1.slip)/len(model1.slip))
 print('发现完所有的再修改Q矩阵估计的平均slip参数：',sum(model2.slip)/len(model2.slip))
-
-np.concatenate((np.array([1,2,3,4]),1),axis=None)
+print('原本Q矩阵估计的平均slip参数：',sum(model3.slip)/len(model3.slip))

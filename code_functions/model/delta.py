@@ -55,11 +55,11 @@ class Delta():
         生成所有q向量的情况，例如如果Q矩阵是4维，输入的nums=[1,3]，
         则生成的q向量是[0,1,0,1]的所有情况有[1,1,0,1]、[0,1,1,1]
         :param nums: 已经确定的属性如已确定第1、3个属性为1，则nums=[1,3]
-        :return: 返回所有q向量的情况：nparray([[1,0,0,1],[0,1,1,1]])
+        :return: 返回所有q向量的情况：nparray([[1,0,1,1],[1,1,0,1]])
 
         example:nums= [1,3]
         generate_q_state(nums)
-        result:array([[1, 1, 0, 1],[0, 1, 1, 1]])
+        result:nparray([[1,0,1,1],[1,1,0,1]])
         """
         nums_list = nums.copy()
         # q_m Q矩阵
@@ -127,20 +127,22 @@ class Delta():
         """
         # ================  第一次迭代  ===========================================================
         nums = []
-        q_list = self.generate_q_state(nums)
-        max_value0, max_row_index0 = self.cal_max_delta(item, q_list)
-        self.modify_q_m[item, :] = q_list[max_row_index0, :]
+        q_list = self.generate_q_state(nums)  # 生成所有q向量的情况
+        max_value0, max_row_index0 = self.cal_max_delta(item, q_list)  # 计算替换了q向量后的第j道题目的delta
+        self.modify_q_m[item, :] = q_list[max_row_index0, :]  # 修改题目item的q向量
         # =================  第二次迭代(以确定一列为1)   ============================================
-        nums.append(max_row_index0)
-        q_list = self.generate_q_state(nums)
-        max_value1, max_row_index1 = self.cal_max_delta(item, q_list)
+        nums.append(max_row_index0)  # 添加已经确定的1列
+        q_list = self.generate_q_state(nums)  # 生成所有q向量的情况
+        max_value1, max_row_index1 = self.cal_max_delta(item, q_list) # 计算替换了q向量后的第j道题目的delta
         for num in nums:
-            q_list[max_row_index1, num] = 0
+            q_list[max_row_index1, num] = 0  # 将已经确定的列置为0
         max_col_index = np.argmax(q_list[max_row_index1, :])
         new_delta, old_delta = max_value1, max_value0
-        while new_delta - old_delta > epsilon:
+        while new_delta - old_delta > epsilon:  # 如果新的delta-旧的delta>ε,
             self.modify_q_m[item, max_col_index] = 1
-            nums.append(max_col_index)
+            nums.append(max_col_index)  # 添加已经确定的列
+            if len(nums)==self.know_num:  # skill=3,如果已经确定了3列，说明q=[1,1,1]有最大的delta，不需要再迭代
+                break
             q_list = self.generate_q_state(nums)
             max_value, max_row_index = self.cal_max_delta(item, q_list)
             for num in nums:
@@ -150,7 +152,9 @@ class Delta():
             new_delta = max_value
         return self.modify_q_m
 
-    def modify_Q(self):
+    def modify_Q(self, **kwargs):
+        if 'epsilon' in kwargs:
+            self.epsilon = kwargs['epsilon']
         for item in tqdm(range(self.prob_num)):
             self.modify_q_m = self.modify_qvector(item, self.epsilon)
         return self.modify_q_m
@@ -165,4 +169,4 @@ if __name__ == '__main__':
     delta = Delta(q_m, R, stu_num, prob_num, know_num)
     delta_model = Delta(q_m, R, stu_num, prob_num, know_num)
     modify_q_m1 = delta_model.modify_qvector(item=0, epsilon=0.05)  # 修改第0道题目的q向量
-    modify_q_m2 = delta_model.modify_Q(epislon=0.05)  # 修改所有题目的q向量
+    modify_q_m2 = delta_model.modify_Q(epsilon=0.05)  # 修改所有题目的q向量

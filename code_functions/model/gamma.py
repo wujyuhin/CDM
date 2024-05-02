@@ -83,21 +83,32 @@ class Gamma():
         """
         score1 = [self.R[stu, item] for stu in understand if self.R[stu, item] >= 0]
         score2 = [self.R[stu, item] for stu in disunderstand if self.R[stu, item] >= 0]
-        s1 = math.sqrt(sum((score1 - sum(score1) / len(score1)) ** 2) / (len(score1) - 1))
-        s2 = math.sqrt(sum((score2 - sum(score2) / len(score2)) ** 2) / (len(score2) - 1))
-        s = math.sqrt(((len(score1) - 1) * (s1 ** 2) + (len(score2) - 1) * (s2 ** 2)) / (len(score1) + len(score2) - 2))
+        try:
+            a = sum((score1 - sum(score1) / (len(score1) + 1e-6)) ** 2)
+        except:
+            print(len(score1))
+            print(sum(score1))
+            print((len(score1) + 1e-6))
+            print(score1 - sum(score1))
+
+
+        s1 = math.sqrt(sum((score1 - sum(score1) / (len(score1) + 1e-6)) ** 2) / (len(score1) - 1 + 1e-6))
+        s2 = math.sqrt(sum((score2 - sum(score2) / (len(score2) + 1e-6)) ** 2) / (len(score2) - 1 + 1e-6))
+        s = math.sqrt(((len(score1) - 1) * (s1 ** 2) + (len(score2) - 1) * (s2 ** 2)) / (len(score1) + len(score2) - 2 + 1e-6))
         return s
 
     def ES(self, understand, disunderstand, item):
-        es = (self.cal_average(understand, item) - self.cal_average(disunderstand, item)) / self.cal_s(understand,
+        a = self.cal_s(understand,disunderstand,item)
+        es = (self.cal_average(understand, item) - self.cal_average(disunderstand, item)) / (self.cal_s(understand,
                                                                                                        disunderstand,
-                                                                                                       item)
+                                                                                                       item) + 1e-6)
+        # print(self.cal_s(understand,disunderstand,item))
         return es
 
     # =============================== 第5步：修改q矩阵  =========================================
     def Gmodify(self,knowledge):
         """ 实例中对偏大的g的题目对应的知识点knowledge 进行修改（1->0）
-        :param knowledge:  知识点索引
+        :param knowledge:  知识点索引,例如knowledge=1
         :return: 修改后的q矩阵
         """
         # 1.先判断有无偏大的g(g>0.2)
@@ -110,15 +121,19 @@ class Gamma():
             return self.modify_q_m
         else:
             for j in self.g_big:
-                es = self.ES(understand, disunderstand, j)
-                if es < self.threshold_es:
-                    if self.modify_q_m[j, knowledge] == 1:
-                        self.modify_q_m[j, knowledge] = 0
+                # 如果无法分出掌握和未掌握的人群，则不修改
+                if len(understand) == 0 or len(disunderstand) == 0:
+                    return self.modify_q_m
+                else:
+                    es = self.ES(understand, disunderstand, j)
+                    if es < self.threshold_es:
+                        if self.modify_q_m[j, knowledge] == 1:
+                            self.modify_q_m[j, knowledge] = 0
             return self.modify_q_m
 
     def Smodify(self, knowledge):
         """
-
+        实例中对偏大的s的题目对应的知识点knowledge 进行修改（0->1）
         :param knowledge:
         :return:
         """
@@ -132,10 +147,14 @@ class Gamma():
             return self.modify_q_m
         else:
             for j in self.s_big:
-                es = self.ES(understand, disunderstand, j)
-                if es >= self.threshold_es:
-                    if self.modify_q_m[j, knowledge] == 0:
-                        self.modify_q_m[j, knowledge] = 1
+                if len(understand) == 0 or len(disunderstand) == 0:
+                    return self.modify_q_m
+                else:
+                    es = self.ES(understand, disunderstand, j)
+                    # print(es)
+                    if es >= self.threshold_es:
+                        if self.modify_q_m[j, knowledge] == 0:
+                            self.modify_q_m[j, knowledge] = 1
             return self.modify_q_m
 
     def modify_Q(self):
