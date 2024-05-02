@@ -28,22 +28,22 @@ class Hypothetical():
         self.modify_q_m = q_m.copy()
         self.mode = mode  # 'loop' or 'no_loop'
 
-    def modify_Q(self, **kwargs):
+    def no_loop_modify_Q(self, **kwargs):
         # 非循环修正
-        # 设置显著性水平
-        if 'alpha' in kwargs:
-            alpha = kwargs['alpha']  # 显著性水平
-        else:
-            alpha = 0.05
+        alpha = kwargs['alpha'] if 'alpha' in kwargs else 0.05  # 显著性水平
+        modify_q_m = kwargs['modify_q_m'] if 'modify_q_m' in kwargs else self.q_m.copy()  # 待修改的Q矩阵
         # 计算guess和slip参数
-        cdm = DINA(self.R, self.modify_q_m, self.stu_num, self.prob_num, self.know_num, skip_value=-1)
+        cdm = DINA(self.R, modify_q_m, self.stu_num, self.prob_num, self.know_num, skip_value=-1)
         cdm.train(epoch=2, epsilon=1e-3)
         g, s = cdm.guess, cdm.slip  # 题目的guess、slip参数
         # 对每一个Q向量(即每道题目)进行第一类错误的判断
-        for i in range(self.modify_q_m.shape[0]):
-            q0 = self.modify_q_m[i]  # 检验该第i道题目的q向量是否需要修正
+        for i in range(modify_q_m.shape[0]):
+            q0 = modify_q_m[i]  # 检验该第i道题目的q向量是否需要修正
             studs = cdm.all_states[cdm.theta, :]  # 获取所有学生的掌握模式
             studs_q0 = studs[np.all(studs == q0, axis=1), :]  # 获取该掌握模式q0的所有学生
+            # 如果没有学生掌握该模式，则不进行修正
+            if studs_q0.shape[0] == 0:
+                continue
             answer_q0 = self.R[np.all(studs == q0, axis=1), :]  # 获取该掌握模式q0的所有学生的作答情况
             n = studs_q0.shape[0]  # 掌握模式q0的所有学生数
             r = n - np.sum(answer_q0[:, i])  # 掌握模式q0的所有学生其中做第i道题目做错的学生数
@@ -61,8 +61,8 @@ class Hypothetical():
                         up_n = studs_q_up.shape[0]  # 掌握模式q_up的所有学生数
                         up_r = np.sum(answer_q_up[:, i])  # 其中做第i道题目做对的学生数
                         # H1:q=q_up 判断是否采取q_up的q向量作为修正q向量
-                        if self.is_refuse(up_n,  g[i],up_r, alpha):
-                            self.modify_q_m[i] = q_up_item
+                        if self.is_refuse(up_n, g[i], up_r, alpha):
+                            modify_q_m[i] = q_up_item
                             break
             # H0:q=q0 判断q向量是正确的
             else:
@@ -75,68 +75,35 @@ class Hypothetical():
                         down_n = studs_q_down.shape[0]  # 掌握模式q_down的所有学生数
                         down_r = np.sum(answer_q_down[:, i])  # 其中做第i道题目做对的学生数
                         # H1:q=q_down 判断是否采取q_down的q向量作为修正q向量
-                        if self.is_refuse(down_n, g[i],down_r,  alpha):
-                            self.modify_q_m[i] = q_down_item
+                        if self.is_refuse(down_n, g[i], down_r, alpha):
+                            modify_q_m[i] = q_down_item
                             break
+        self.modify_q_m = modify_q_m
         return self.modify_q_m
 
-        # cur_Q = np.array(self.modify_q_m)
-        # cur_gs = np.array(gs)
-        # cur_pa = np.array(pa)
-        # temp_Q = np.zeros_like(self.modify_q_m)
-        # times = 0
-        #
+    def loop_modify_Q(self, **kwargs):
+        # 循环修正
+        q_modify_old = self.q_m.copy()
+        # 因为在函数里面对modify_q_m进行了修改，所以需要copy一份，保证不影响原来的q_modify_old
+        q_modify_new = self.no_loop_modify_Q(modify_q_m=q_modify_old.copy(),**kwargs)
+        flag = 0
+        while not np.all(q_modify_old == q_modify_new):
+            q_modify_old = q_modify_new
+            q_modify_new = self.no_loop_modify_Q(modify_q_m=q_modify_old.copy(),**kwargs)
+            flag += 1
+            if flag > 20:
+                break
+        # print(f"循环修正次数：{flag}")
+        return self.modify_q_m
 
-        # while not np.all(self.modify_q_m == temp_Q) and times <= 10:
-        #     # cur_Q和temp_Q不完全相等，且迭代次数不超过10次
-        #     times += 1
-        #     temp_Q = self.modify_q_m.copy()
-        #
-        #     for i in range(self.modify_q_m.shape[0]):
-        #         X = self.modify_q_m[i]
-        #         cur_g, cur_s = cur_gs[i]
-        #         cur_ans = np.column_stack((cur_pa, self.R[:, i]))  # 属性参数和作答矩阵的合并
-        #
-        #         n = len(cur_ans[np.all(cur_ans[:, :-1] == X, axis=1)]) / (len(X) + 1)
-        #         r = n - np.sum(cur_ans[np.all(cur_ans[:, :-1] == X, axis=1), -1])
-
-        # X = cur_Q[i]
-        # cur_g, cur_s = cur_gs[i]
-        # cur_ans = np.column_stack((cur_pa, d[:, i]))  # 属性参数和作答矩阵的合并,cur_pa是属性参数，d是作答矩阵
-        # 属性参数是一个矩阵，每一行是一个学生的属性参数，作答矩阵是一个矩阵，每一行是一个学生的作答情况
-        # np.column_stack作用是将两个矩阵按列合并，即将属性参数和作答矩阵合并
-        # 例如：cur_pa = [[1, 0, 1], [0, 1, 1], [1, 1, 0]], d = [[1, 0, 0], [0, 1, 1], [1, 1, 0]]
-        # cur_ans = [[1, 0, 1, 1, 0, 0], [0, 1, 1, 0, 1, 1], [1, 1, 0, 1, 1, 0]]
-
-        #
-        # n = len(cur_ans[np.all(cur_ans[:, :-1] == X, axis=1)]) / (len(X) + 1)
-        # r = n - np.sum(cur_ans[np.all(cur_ans[:, :-1] == X, axis=1), -1])
-
-        # if self.is_refuse(n, r, cur_s, a):
-        #     q_up = self.q_up_down(X)['q_up']
-        #     if q_up is not None:
-        #         for m, q_up_item in enumerate(q_up):
-        #             up_n = len(cur_ans[np.all(cur_ans[:, :-1] == q_up_item, axis=1)]) / (len(X) + 1)
-        #             up_r = np.sum(cur_ans[np.all(cur_ans[:, :-1] == q_up_item, axis=1), -1])
-        #             if self.is_refuse(up_n, up_r, cur_g, a):
-        #                 cur_Q[i] = q_up_item
-        #                 cur_DINA_results = update_model(self.R, cur_Q)
-        #                 cur_gs, cur_pa = cur_DINA_results['gs'], cur_DINA_results['pa']
-        #                 break
-        # else:
-        #     q_down = q_up_down(X)['q_down']
-        #     if q_down is not None:
-        #         for m, q_down_item in enumerate(q_down):
-        #             down_n = len(cur_ans[np.all(cur_ans[:, :-1] == q_down_item, axis=1)]) / (len(X) + 1)
-        #             down_r = np.sum(cur_ans[np.all(cur_ans[:, :-1] == q_down_item, axis=1), -1])
-        #             if self.is_refuse(down_n, down_r, cur_g, a):
-        #                 cur_Q[i] = q_down_item
-        #                 cur_DINA_results = update_model(self.R, cur_Q)
-        #                 cur_gs, cur_pa = cur_DINA_results['gs'], cur_DINA_results['pa']
-        #                 break
-        # return 1
-
-    # 非类的函数
+    def modify_Q(self, **kwargs):
+        self.mode = kwargs['mode'] if 'mode' in kwargs else self.mode
+        if self.mode == 'loop':
+            return self.loop_modify_Q(**kwargs)
+        elif self.mode == 'no_loop':
+            return self.no_loop_modify_Q(**kwargs)
+        else:
+            raise ValueError("mode should be 'loop' or 'no_loop'")
 
     def is_refuse(self, n, p, r, alpha=0.05):
         """
@@ -180,12 +147,6 @@ class Hypothetical():
         return {'q': q, 'q_up': q_up, 'q_down': q_down}
 
 
-def update_model(cur_Q):
-    # 这里模拟GDINA模型的更新，实际应用中需要替换为真实的GDINA模型处理
-    # 返回系数gs和属性参数pa
-    pass
-
-
 if __name__ == "__main__":
     # is_refuse(10, 0.5, 9, 0.05)
     # q = [1, 0, 0, 1]
@@ -197,7 +158,5 @@ if __name__ == "__main__":
     R = np.array(pd.read_csv("../../data/math2015/simulation/simulation_data.csv", index_col=0))
     stu_num = R.shape[0]
     # ================= 假设检验法 ==================================
-    hypothetical = Hypothetical(q_m, R, stu_num, prob_num, know_num)
-    gs = np.random.rand(prob_num, 2)
-    pa = np.random.rand(stu_num, know_num)
-    a = hypothetical.modify_Q(alpha=0.05)
+    # hypothetical = Hypothetical(q_m, R, stu_num, prob_num, know_num, mode='loop')
+    # a = hypothetical.loop_modify_Q(alpha=0.05)
