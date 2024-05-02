@@ -176,7 +176,7 @@ def generate_wrong_Q(Q, wrong_rate: list or float):
      'wrong_set_01': array([[0., 0.],
      'wrong_set_10': array(}
     """
-    if isinstance(wrong_rate, float):
+    if isinstance(wrong_rate, (float, int)):
         wrong_rate = [wrong_rate, wrong_rate]
     q_index = index_set(Q)  # 生成Q矩阵中0或者1的所有坐标(x,y)
     set_0 = q_index['set_0']  # Q矩阵中0的坐标,[(x,y),...]
@@ -479,16 +479,7 @@ if __name__ == '__main__':
     probs = [0.5, 0.4, 0.1, 0, 0, 0]
     wrong = [0.2, 0.2]
     Q = generate_Q(items, skills, probs)
-    # 运行sim_wrong_q_rate函数
     result = generate_wrong_Q(Q, wrong)
-    # print(result['Q_wrong'])
-    # print(result['is_wrong_10'])
-    # print(result['wrong_set_01'])
-
-    # cdm = DINA(self.R, modify_q_m, self.stu_num, self.prob_num, self.know_num, skip_value=-1)
-    # answer = np.apply_along_axis(state_answer, 1, A, A)  # 生成每种掌握模式下的答案 2^k-1 * 2^k-1
-    # 应该加一行掌握模式全为0的答案
-    # 生成掌握模式，掌握模式应该比Q矩阵多一行全0的模式
     # 正态分布抽样
     states = np.concatenate((np.zeros((1,skills)),attribute_pattern(skills)))
     states_samples = state_sample(states, num=students, method="normal", mu_skills=5,sigma_skills=0.7)  # 从掌握模式中抽样
@@ -512,4 +503,5 @@ if __name__ == '__main__':
         print(f"掌握{i}个知识点的有{sum(np.sum(states_samples4, axis=1) == i)}个")
     # 根据掌握模式、Q矩阵生成答案
     answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 把arr中的每种模式都回答Q矩阵题目
-    generate_wrong_R(answer, 0.1)
+    answer = generate_wrong_R(answer, 0.1)['R_wrong']
+

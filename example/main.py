@@ -8,7 +8,8 @@ from code_functions.model.delta import Delta
 from code_functions.model.gamma import Gamma
 from code_functions.model.hypothetical import Hypothetical
 from code_functions.model.metric import PMR, AMR, TPR, FPR
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, state_sample, attribute_pattern, state_answer
+from code_functions.data_generate.generate import generate_Q, generate_wrong_Q,generate_wrong_R
+from code_functions.data_generate.generate import state_sample, attribute_pattern, state_answer
 
 '''
 # ============================ 模拟数据准备  ====================================================
@@ -28,28 +29,27 @@ modify_q_m2 = delta_model.modify_Q_inherit()
 '''
 
 np.random.seed(0)
-skills = 4
-items = 24
-students = 2000
+skills = 4  # 知识点数
+skills_probs = [0.2, 0.6, 0.2,0]  # 考察知识点数量分布
+items = 24  # 题目数
+students = 2000  # 学生数
 amr, pmr, tpr, fpr = [], [], [], []
-wrong = 0.1
+wrong = 0.1  # Q矩阵错误率
+quality = 0.2  # 题目质量
 
-# Q = generate_Q(items, skills, probs=[0.1, 0.2, 0.3,0.4])
-Q = generate_Q(items, skills, probs=[0.2, 0.6, 0.2,0])
-result = generate_wrong_Q(Q, wrong)
+# 多种算法比较性能
+Q = generate_Q(items, skills, probs=skills_probs)
+result = generate_wrong_Q(Q, wrong_rate=wrong)
 wrong_Q = result['Q_wrong']
 states = np.concatenate((np.zeros((1, skills)), attribute_pattern(skills)))  # 所有学生掌握模式的可能情况
-# states_samples = state_sample(states, num=students, method="uniform_mode")  # 从掌握模式中抽样
 states_samples = state_sample(states, num=students, method="assign",set_skills=2)  # 从掌握模式中抽样
 answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 根据掌握模式生成作答情况
-# hypothesis
+answer = generate_wrong_R(answer, wrong_rate=quality)['R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
 hypothesis_model = Hypothetical(q_m=wrong_Q, R=answer, stu_num=students, prob_num=items, know_num=skills, mode='loop')
-modify_q_m1 = hypothesis_model.modify_Q(alpha=0.01)  # 修正Q矩阵
-# delta
 delta_model = Delta(q_m=wrong_Q, R=answer, stu_num=students, prob_num=items, know_num=skills, mode='inherit', epsilon=0.05)
-modify_q_m2 = delta_model.modify_Q()  # Q矩阵
-# gamma
 gamma_model = Gamma(q_m=wrong_Q, R=answer, stu_num=students, prob_num=items, know_num=skills, threshold_g=0.2, threshold_s=0.2, threshold_es=0.2)
+modify_q_m1 = hypothesis_model.modify_Q(alpha=0.01)  # 修正Q矩阵
+modify_q_m2 = delta_model.modify_Q(epsilon=0.05)  # Q矩阵
 modify_q_m3 = gamma_model.modify_Q()  # Q矩阵
 
 # 计算AMR,PMR,TPR,FPR
