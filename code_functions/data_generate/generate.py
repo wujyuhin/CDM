@@ -520,6 +520,10 @@ if __name__ == '__main__':
     with open(file_path, "wb") as f:
         pickle.dump(dataset, f)
 
+    # 读取
+    with open(file_path, "rb") as f:
+        dataset_read = pickle.load(f)
+
     # 测试读取数据的速度
     # t1 = time.time()
     # np.random.seed(0)
