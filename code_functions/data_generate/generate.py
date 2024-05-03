@@ -196,26 +196,26 @@ def generate_wrong_Q(Q, wrong_rate: list or float):
     wrong_set_01 = np.zeros((sum_errors_0, 2))  # 用于记录修改0为1的坐标(x,y)
 
     # ================= 对Q矩阵中的0元素进行修改 =================
-    # temp = 0  # 记录修改次数
-    # while temp < sum_errors_0:
-    #     i, j = set_0[np.random.choice(range(len(set_0)))]  # 随机选择一个0元素的坐标
-    #     while is_wrong[i, j]:
-    #         # 规则 修改过的元素不能再次修改
-    #         i, j = set_0[np.random.choice(range(len(set_0)))]
-    #     Q_wrong[i, j] = 1  # 把Q矩阵中的0改为1
-    #     is_wrong[i, j] = True  # 记录修改过的位置
-    #     wrong_set_01[temp, :] = [i, j]  # 记录修改的坐标:(x,y)
-    #     temp += 1
+    temp = 0  # 记录修改次数
+    while temp < sum_errors_0:
+        i, j = set_0[np.random.choice(range(len(set_0)))]  # 随机选择一个0元素的坐标
+        while is_wrong[i, j]:
+            # 规则 修改过的元素不能再次修改
+            i, j = set_0[np.random.choice(range(len(set_0)))]
+        Q_wrong[i, j] = 1  # 把Q矩阵中的0改为1
+        is_wrong[i, j] = True  # 记录修改过的位置
+        wrong_set_01[temp, :] = [i, j]  # 记录修改的坐标:(x,y)
+        temp += 1
 
     # while循环太慢了，有无效的循环，每次选中后，都要判断是否已经修改过，可以直接生成不重复的索引
     # 每次选中ij，删除一对
-    temp = 0
-    while temp < sum_errors_0:
-        i, j = set_0.pop(np.random.choice(range(len(set_0))))
-        Q_wrong[i, j] = 1
-        is_wrong[i, j] = True
-        wrong_set_01[temp, :] = [i, j]
-        temp += 1
+    # temp = 0
+    # while temp < sum_errors_0:
+    #     i, j = set_0.pop(np.random.choice(range(len(set_0))))
+    #     Q_wrong[i, j] = 1
+    #     is_wrong[i, j] = True
+    #     wrong_set_01[temp, :] = [i, j]
+    #     temp += 1
 
     # ================= 对Q矩阵中的1元素进行修改 =================
     temp = 0  # 初始化一个临时变量temp，用于记录当前已经生成的错误数量
@@ -401,7 +401,7 @@ def state_answer(state, Q):
 def generate_wrong_R(R, wrong_rate):
     if isinstance(wrong_rate, (float, int)):
         wrong_rate = [wrong_rate, wrong_rate]
-    q_index = index_set(Q)  # 生成Q矩阵中0或者1的所有坐标(x,y)
+    q_index = index_set(R)  # 生成Q矩阵中0或者1的所有坐标(x,y)
     set_0 = q_index['set_0']  # Q矩阵中0的坐标,[(x,y),...]
     set_1 = q_index['set_1']  # Q矩阵中1的坐标,[(x,y),...]
     sum_errors_0 = int(np.floor(len(set_0) * wrong_rate[0]))  # 计算要设定错误的1元素个数

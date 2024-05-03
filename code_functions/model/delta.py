@@ -155,7 +155,7 @@ class Delta():
     def modify_Q(self, **kwargs):
         if 'epsilon' in kwargs:
             self.epsilon = kwargs['epsilon']
-        for item in tqdm(range(self.prob_num)):
+        for item in range(self.prob_num):
             self.modify_q_m = self.modify_qvector(item, self.epsilon)
         return self.modify_q_m
 
