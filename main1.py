@@ -3,12 +3,12 @@ import time
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
-from code_functions.data_generate.generate import attribute_pattern, state_sample, state_answer
-from code_functions.model.hypothesis_skill import Hypothetical_skill
-from code_functions.model.delta import Delta
-from code_functions.model.gamma import Gamma
-from code_functions.model.metric import PMR, AMR, TPR, FPR
+from codes.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
+from codes.data_generate.generate import attribute_pattern, state_sample, state_answer
+from codes.model.SelectHypothesisTest import SelectHypothesisTest as SHT
+from codes.model.delta import Delta
+from codes.model.gamma import Gamma
+from codes.model.metric import PMR, AMR, TPR, FPR
 items = 40  # 题目数量
 skills = 5  # 知识点数量
 students = 1000  # 学生数量
@@ -37,8 +37,8 @@ for q_wrong_rate in [0.05, 0.1, 0.15,0.2]:
         R = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 根据掌握模式生成作答情况
         R = generate_wrong_R(R, wrong_rate=Rwrong_rate)['R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
         for alpha in [0.01,0.05,0.1]:
-            ht = Hypothetical_skill(wrong_Q, R, students, items, skills, alpha)
-            modify_q = ht.modify_Q_method3(mode='loop')
+            ht = SHT(wrong_Q, R, students, items, skills, alpha)
+            modify_q = ht.modify_Q(mode='loop')
             # 计算指标 1.错误Q矩阵的PMR,AMR 2.修改Q矩阵的PMR,AMR,TPR,FPR
             alpha_dict["alpha_"+str(alpha)].append([PMR(Q, wrong_Q),PMR(Q, modify_q),PMR(Q, modify_q)-PMR(Q, wrong_Q),
                                                     AMR(Q, wrong_Q),AMR(Q, modify_q),AMR(Q, modify_q)-AMR(Q, wrong_Q),

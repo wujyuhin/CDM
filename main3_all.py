@@ -3,9 +3,9 @@ import time
 
 import numpy as np
 import pandas as pd
-from code_functions.EduCDM import EMDINA as DINA
-from code_functions.model.hypothesis_skill import Hypothetical_skill
-from code_functions.model.delta import Delta
+from codes.EduCDM import EMDINA as DINA
+from codes.model.SelectHypothesisTest import SelectHypothesisTest as SHT
+from codes.model.delta import Delta
 from rpy2.robjects import r
 
 # TIMSS2007 可用维度合适
@@ -15,11 +15,11 @@ from rpy2.robjects import r
 # data_name = 'TIMSS2007'
 
 # math/FrcSub  分数计算 拟合度较差  delatorre用过的数据，可用维度很小
-data = np.array(pd.read_csv('data/FrcSub/FrcSub1/data.csv', header=None))
-Q = np.array(pd.read_excel('./data/math2015/FrcSub1/q_m.xlsx', header=None))
+data = np.array(pd.read_csv('./data/FrcSub/FrcSub1/data.csv', header=None))
+Q = np.array(pd.read_excel('./data/FrcSub/FrcSub1/q_m.xlsx', header=None))
 Q[4,0] = 1
-print("数据集为math2015/FrcSub1")
-data_name = 'math2015/FrcSub1'
+print("数据集为FrcSub/FrcSub1")
+data_name = 'FrcSub/FrcSub1'
 
 # 知识点维数太多，不可用
 # data/FrcSub/FrcSub3 . Fraction Subtraction Data, 20 Items, 8 Hypothesized Skills
@@ -61,8 +61,9 @@ wrong_Q = Q.copy()
 #  =============================== 使用假设检验方法修正Q矩阵
 t1 = time.time()
 alpha = 0.05
-ht = Hypothetical_skill(wrong_Q, data, students_num, items_num, skills_num, alpha=alpha)
-modify_q = ht.modify_Qj_method3_loop(0, 0.05)
+ht = SHT(wrong_Q, data, students_num, items_num, skills_num, alpha=alpha)
+# modify_q = ht.modify_Qj_loop(0, 0.05)
+modify_q = ht.modify_Q(mode='loop')
 print("alpha:", alpha)
 # modify_q = ht.modify_Q_method3(mode='loop')  # 二次修改没有变化是因为待修改矩阵还是wrong_Q
 # cdm_ht = DINA(data, modify_q, students_num, items_num, skills_num, skip_value=-1)
@@ -80,7 +81,7 @@ print("epsilon:", epsilon)
 t3 = time.time()
 print("delta time cost:", t3 - t2)
 # ============================ gamma法
-from code_functions.model.gamma import Gamma
+from codes.model.gamma import Gamma
 
 gamma = Gamma(wrong_Q, data, students_num, items_num, skills_num, threshold_g=0.2, threshold_s=0.2, threshold_es=0.2)
 modify_q_gamma = gamma.modify_Q()

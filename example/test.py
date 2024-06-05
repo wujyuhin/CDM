@@ -1,4 +1,4 @@
-from code_functions.model.hypothetical import is_refuse
+from codes.model.hypothetical import is_refuse
 import math
 # 累计概率
 n = 30

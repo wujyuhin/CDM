@@ -1,11 +1,11 @@
 # ============================ 导入必要的包  ====================================================
 import numpy as np
 import logging
-from code_functions.model.hypothetical import Hypothetical
-from code_functions.EduCDM import EMDINA as DINA
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
-from code_functions.data_generate.generate import attribute_pattern, state_sample, state_answer
-from code_functions.model.metric import PMR, AMR, TPR,FPR
+from codes.model.hypothetical import Hypothetical
+from codes.EduCDM import EMDINA as DINA
+from codes.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
+from codes.data_generate.generate import attribute_pattern, state_sample, state_answer
+from codes.model.metric import PMR, AMR, TPR,FPR
 from tqdm import tqdm
 logging.getLogger().setLevel(logging.INFO)
 

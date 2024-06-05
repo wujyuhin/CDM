@@ -1,8 +1,8 @@
 # ============================ 导入必要的包  ====================================================
 import numpy as np
 import logging
-from code_functions.model.delta import Delta
-from code_functions.EduCDM import EMDINA as DINA
+from codes.model.delta import Delta
+from codes.EduCDM import EMDINA as DINA
 logging.getLogger().setLevel(logging.INFO)
 
 # ============================  加减法数据  ====================================================

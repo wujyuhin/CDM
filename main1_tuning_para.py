@@ -3,12 +3,12 @@
 import time
 from tqdm import tqdm
 import numpy as np
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
-from code_functions.data_generate.generate import attribute_pattern, state_sample, state_answer
-from code_functions.model.hypothesis_skill import Hypothetical_skill
-from code_functions.model.delta import Delta
-from code_functions.model.gamma import Gamma
-from code_functions.model.metric import PMR, AMR, TPR, FPR
+from codes.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
+from codes.data_generate.generate import attribute_pattern, state_sample, state_answer
+from codes.model.SelectHypothesisTest import SelectHypothesisTest as SHT
+from codes.model.delta import Delta
+from codes.model.gamma import Gamma
+from codes.model.metric import PMR, AMR, TPR, FPR
 items = 40  # 题目数量
 skills = 5  # 知识点数量
 students = 1000  # 学生数量
@@ -22,7 +22,7 @@ sample_mode = "frequency"
 amr, pmr, tpr, fpr = [], [], [], []
 t = []
 np.random.seed(0)
-for i in tqdm(range(1)):
+for i in tqdm(range(100)):
     Q = generate_Q(items, skills, probs=prob)  # 生成Q矩阵
     wrong_Q = generate_wrong_Q(Q, Rwrong_rate)['Q_wrong']  # 生成错误率的Q矩阵
     states = np.concatenate((np.zeros((1, skills)), attribute_pattern(skills)))  # 所有学生掌握模式的可能情况
@@ -31,12 +31,12 @@ for i in tqdm(range(1)):
     R = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 根据掌握模式生成作答情况
     R = generate_wrong_R(R, wrong_rate=Qwrong_rate)['R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
 
-    ht = Hypothetical_skill(wrong_Q, R, students, items, skills, alpha=0.01)
+    ht = SHT(wrong_Q, R, students, items, skills, alpha=0.01)
     delta = Delta(wrong_Q, R, students, items, skills, epsilon=0.001,mode='dependence')
     gamma = Gamma(wrong_Q, R, students, items, skills, threshold_g=0.2, threshold_s=0.2, threshold_es=0.2)
     # modify_q_m1 = ht.modify_Q(mode='loop')
     t1 = time.time()
-    modify_q_m1 = ht.modify_Q_method3(mode='loop')
+    modify_q_m1 = ht.modify_Q(mode='loop')
     t2 = time.time()
     modify_q_m2 = delta.modify_Q()
     t3 = time.time()

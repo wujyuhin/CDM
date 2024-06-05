@@ -3,11 +3,11 @@ import time
 
 import numpy as np
 import pandas as pd
-from code_functions.EduCDM import EMDINA as DINA
-from code_functions.model.hypothesis_skill import Hypothetical_skill
-from code_functions.model.delta import Delta
+from codes.EduCDM import EMDINA as DINA
+from codes.model.SelectHypothesisTest import SelectHypothesisTest as SHT
+from codes.model.delta import Delta
 from rpy2.robjects import r
-from code_functions.model.gamma import Gamma
+from codes.model.gamma import Gamma
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2 import robjects
@@ -43,8 +43,8 @@ for item in range(0, items_num):
     # ===============================  object2:使用假设检验方法修正Q矩阵
     t1 = time.time()
     alpha = 0.05
-    ht = Hypothetical_skill(wrong_Q, data, students_num, items_num, skills_num, alpha=alpha)
-    modify_q = ht.modify_Qj_method3_loop(item, alpha=alpha)
+    ht = SHT(wrong_Q, data, students_num, items_num, skills_num, alpha=alpha)
+    modify_q = ht.modify_Qj_loop(item, alpha=alpha)
     t2 = time.time()
     print("alpha:", alpha)
     print("ht time cost:", t2 - t1)

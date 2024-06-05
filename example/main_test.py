@@ -1,12 +1,12 @@
 import numpy as np
 from tqdm import tqdm
 import time
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R, state_sample, attribute_pattern, state_answer
-from code_functions.model.hypothesis_skill import Hypothetical_skill as Hypothetical
-from code_functions.model.delta import Delta
-from code_functions.model.gamma import Gamma
-from code_functions.model.metric import PMR, AMR, TPR, FPR
-from code_functions.EduCDM import EMDINA as DINA
+from codes.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R, state_sample, attribute_pattern, state_answer
+from codes.model.hypothesis_skill import Hypothetical_skill as Hypothetical
+from codes.model.delta import Delta
+from codes.model.gamma import Gamma
+from codes.model.metric import PMR, AMR, TPR, FPR
+from codes.EduCDM import EMDINA as DINA
 
 np.random.seed(0)
 # students = [300, 500, 1000]  # 生成学生数量

@@ -7,12 +7,12 @@ import time
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
-from code_functions.data_generate.generate import attribute_pattern, state_sample, state_answer
-from code_functions.model.hypothesis_skill import Hypothetical_skill
-from code_functions.model.delta import Delta
-from code_functions.model.gamma import Gamma
-from code_functions.model.metric import PMR, AMR, TPR, FPR
+from codes.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
+from codes.data_generate.generate import attribute_pattern, state_sample, state_answer
+from codes.model.SelectHypothesisTest import SelectHypothesisTest as SHT
+from codes.model.delta import Delta
+from codes.model.gamma import Gamma
+from codes.model.metric import PMR, AMR, TPR, FPR
 
 t_start = time.time()
 items = 40  # 题目数量
@@ -42,8 +42,8 @@ for Rwrong_rate in [0.1, 0.15, 0.2]:
             R = generate_wrong_R(R, wrong_rate=Rwrong_rate)['R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
             # 开始修正Q矩阵
             t1 = time.time()
-            ht = Hypothetical_skill(wrong_Q, R, students, items, skills, alpha=0.01)
-            modify_q = ht.modify_Q_method3(mode='loop')
+            ht = SHT(wrong_Q, R, students, items, skills, alpha=0.01)
+            modify_q = ht.modify_Q(mode='loop')
             t2 = time.time()
             delta = Delta(wrong_Q, R, students, items, skills, epsilon=0.01, mode='dependence')
             modify_q_delta = delta.modify_Q()

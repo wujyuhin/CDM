@@ -6,7 +6,7 @@ logging.getLogger().setLevel(logging.INFO)
 import pandas as pd
 import numpy as np
 # from EduCDM import EMDINA as DINA
-from code_functions.EduCDM import EMDINA as DINA
+from codes.EduCDM import EMDINA as DINA
 
 class Gamma():
     def __init__(self, q_m, R, stu_num, prob_num, know_num,threshold_g, threshold_s, threshold_es):

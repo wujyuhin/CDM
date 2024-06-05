@@ -7,7 +7,7 @@ import logging
 
 logging.getLogger().setLevel(logging.INFO)
 # from EduCDM import EMDINA as DINA
-from code_functions.EduCDM import EMDINA as DINA
+from codes.EduCDM import EMDINA as DINA
 
 class Delta():
     def __init__(self, q_m, R, stu_num, prob_num, know_num, mode='inherit', epsilon=0.05):

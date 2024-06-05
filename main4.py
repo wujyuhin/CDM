@@ -1,11 +1,11 @@
 """ 研究二实例：本文件用于对比delaTorre使用的Q矩阵与我们使用的Q矩阵的差异 """
 import random
 import numpy as np
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
-from code_functions.data_generate.generate import attribute_pattern, state_sample, state_answer_gs
-from code_functions.model.hypothesis_skill import Hypothetical_skill
-from code_functions.model.delta import Delta
-from code_functions.model.gamma import Gamma
+from codes.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R
+from codes.data_generate.generate import attribute_pattern, state_sample, state_answer_gs
+from codes.model.hypothesis_skill import Hypothetical_skill
+from codes.model.delta import Delta
+from codes.model.gamma import Gamma
 import pandas as pd
 
 

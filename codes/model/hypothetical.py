@@ -1,11 +1,12 @@
+# 孙文洁的方法
 import math
 import numpy as np
-from code_functions.data_generate.generate import attribute_pattern
+from codes.data_generate.generate import attribute_pattern
 from itertools import combinations
 import numpy as np
 from scipy.special import comb
 import pandas as pd
-from code_functions.EduCDM import EMDINA as DINA
+from codes.EduCDM import EMDINA as DINA
 
 
 class Hypothetical():

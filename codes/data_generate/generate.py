@@ -316,7 +316,7 @@ def state_sample(states, num, method: str = None, mu_skills: int = None, sigma_s
     从掌握模式中抽样
     :param states: ndarray,掌握模式 如[[0,1],[1,0],[1,1]]
     :param num:  抽样数量
-    :param method:  抽样方法,uniform_mode:均匀分布,uniform_skill:根据掌握知识点的模式，对每种模式均匀抽样,normal:正态分布
+    :param method:  抽样方法,uniform_mode:均匀分布,uniform_skill:根据掌握知识点的模式，对每种模式均匀抽样,normal:正态分布,frequency:根据掌握知识点的模式，对每种模式按照频率抽样
     :param mu_skills:  抽样均值，填写掌握是指点的个数，会自动压缩成标准正态分布的分位数,type:int,example:1,2,3... method=normal时使用
     :param sigma_skills:  抽样方差 默认为1,method=normal时使用
     :param set_skills:  指定抽样的掌握模式中的知识点个数 method=uniform_skill时使用

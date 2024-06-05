@@ -1,6 +1,6 @@
 # ============================ 导入必要的包  ====================================================
 import numpy as np
-from code_functions.EduCDM import EMDINA as DINA
+from codes.EduCDM import EMDINA as DINA
 # ============================  加减法数据进行认知诊断  ==========================================
 # 数据准备
 # Q矩阵

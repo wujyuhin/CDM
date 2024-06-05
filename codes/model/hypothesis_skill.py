@@ -1,18 +1,17 @@
 # hypothesis_skill是以知识点单位的假设检验
 # 孙假设检验是以题目考察模式即q向量未单位的假设检验
 import random
-
 import pandas as pd
 from scipy.stats import norm
-from code_functions.data_generate.generate import generate_Q, generate_wrong_R, generate_wrong_Q
+from codes.data_generate.generate import generate_Q, generate_wrong_R, generate_wrong_Q
 import numpy as np
-from code_functions.data_generate.generate import attribute_pattern, state_sample, state_answer, state_answer_gs
+from codes.data_generate.generate import attribute_pattern, state_sample, state_answer, state_answer_gs
 import math
-from code_functions.EduCDM import EMDINA as DINA
+from codes.EduCDM import EMDINA as DINA
 from scipy.stats import binom
-from code_functions.model.metric import PMR, AMR, TPR, FPR
-from code_functions.model.delta import Delta
-from code_functions.model.gamma import Gamma
+from codes.model.metric import PMR, AMR, TPR, FPR
+from codes.model.delta import Delta
+from codes.model.gamma import Gamma
 from tqdm import tqdm
 import pandas as pd
 

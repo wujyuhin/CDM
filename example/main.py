@@ -6,12 +6,12 @@ import logging
 import tqdm
 import time
 import pickle
-from code_functions.model.delta import Delta
-from code_functions.model.gamma import Gamma
-from code_functions.model.hypothetical import Hypothetical
-from code_functions.model.metric import PMR, AMR, TPR, FPR
-from code_functions.data_generate.generate import generate_Q, generate_wrong_Q,generate_wrong_R
-from code_functions.data_generate.generate import state_sample, attribute_pattern, state_answer
+from codes.model.delta import Delta
+from codes.model.gamma import Gamma
+from codes.model.hypothetical import Hypothetical
+from codes.model.metric import PMR, AMR, TPR, FPR
+from codes.data_generate.generate import generate_Q, generate_wrong_Q,generate_wrong_R
+from codes.data_generate.generate import state_sample, attribute_pattern, state_answer
 
 '''
 # ============================ 模拟数据准备  ====================================================

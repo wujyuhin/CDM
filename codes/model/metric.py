@@ -1,6 +1,6 @@
 # 计算评价指标
 import numpy as np
-from code_functions.data_generate import generate
+from codes.data_generate import generate
 
 
 # 项目模式判准率 pattern match ratio, PMR
