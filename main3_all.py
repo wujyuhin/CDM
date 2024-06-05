@@ -9,17 +9,17 @@ from code_functions.model.delta import Delta
 from rpy2.robjects import r
 
 # TIMSS2007 可用维度合适
-data = np.array(pd.read_csv('./data/TIMSS/TIMSS2007/data.csv', header=None))
-Q = np.array(pd.read_excel('./data/TIMSS/TIMSS2007/q_m.xlsx', header=None))
-print("数据集为TIMSS2007")
-data_name = 'TIMSS2007'
+# data = np.array(pd.read_csv('./data/TIMSS/TIMSS2007/data.csv', header=None))
+# Q = np.array(pd.read_excel('./data/TIMSS/TIMSS2007/q_m.xlsx', header=None))
+# print("数据集为TIMSS2007")
+# data_name = 'TIMSS2007'
 
 # math/FrcSub  分数计算 拟合度较差  delatorre用过的数据，可用维度很小
-# data = np.array(pd.read_csv('./data/math2015/FrcSub1/data.csv', header=None))
-# Q = np.array(pd.read_excel('./data/math2015/FrcSub1/q_m.xlsx', header=None))
-# Q[4,0] = 1
-# print("数据集为math2015/FrcSub1")
-# data_name = 'math2015/FrcSub1'
+data = np.array(pd.read_csv('data/FrcSub/FrcSub1/data.csv', header=None))
+Q = np.array(pd.read_excel('./data/math2015/FrcSub1/q_m.xlsx', header=None))
+Q[4,0] = 1
+print("数据集为math2015/FrcSub1")
+data_name = 'math2015/FrcSub1'
 
 # 知识点维数太多，不可用
 # data/FrcSub/FrcSub3 . Fraction Subtraction Data, 20 Items, 8 Hypothesized Skills

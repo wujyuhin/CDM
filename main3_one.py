@@ -21,11 +21,11 @@ print("数据集为TIMSS2007")
 data_name = 'TIMSS2007'
 
 # math/FrcSub  分数计算 拟合度较差  delatorre用过的数据
-# data = np.array(pd.read_csv('./data/math2015/FrcSub1/data.csv', header=None))
-# Q = np.array(pd.read_excel('./data/math2015/FrcSub1/q_m.xlsx', header=None))
-# Q[4, 0] = 1
-# print("数据集为math2015/FrcSub1")
-# data_name = 'FrcSub1'
+data = np.array(pd.read_csv('data/FrcSub/FrcSub1/data.csv', header=None))
+Q = np.array(pd.read_excel('./data/math2015/FrcSub1/q_m.xlsx', header=None))
+Q[4, 0] = 1
+print("数据集为math2015/FrcSub1")
+data_name = 'FrcSub1'
 
 # 参数设置
 students_num = data.shape[0]
