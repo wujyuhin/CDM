@@ -47,7 +47,7 @@ quality = 0.2  # 题目质量
 # states_samples = state_sample(states, num=students, method="assign",set_skills=2)  # 从掌握模式中抽样
 # answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 根据掌握模式生成作答情况
 # answer = generate_wrong_R(answer, wrong_rate=quality)['R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
-with open('../data/dataset.pkl','rb') as f:
+with open('../data/dataset_error.pkl', 'rb') as f:
     dataset = pickle.load(f)
 students = [300, 500, 1000]  # 生成学生数量
 skills_items_probs = [[3, 24, [[0.5, 0.3, 0.2], [0.2, 0.3, 0.5]]],
@@ -57,7 +57,8 @@ qualities = [[0, 0], [0.1, 0.1], [0.2, 0.2], [0.3, 0.3]]  # 生成题目质量
 sample_modes = ["uniform_mode", "normal", "assign"]  # 生成抽样模式
 sample_modes_para = {"uniform_mode": None, "normal": [2, 1], "assign": 1}  # normal:均值为2，方差为1 assign:指定抽样只掌握2个知识点
 metric_set = {}
-for index,data in tqdm.tqdm(enumerate(dataset)):
+index = 0
+for data in tqdm.tqdm(dataset):
     metric_student_num = {}
     for student in students:
         metric_skill = {}
@@ -92,20 +93,21 @@ for index,data in tqdm.tqdm(enumerate(dataset)):
                             amr = [AMR(Q, modify_q_hypothesis), AMR(Q, modify_q_delta), AMR(Q, modify_q_gamma)]
                             tpr = [TPR(Q, wrong_Q, modify_q_hypothesis), TPR(Q, wrong_Q, modify_q_delta), TPR(Q, wrong_Q, modify_q_gamma)]
                             fpr = [FPR(Q, wrong_Q, modify_q_hypothesis), FPR(Q, wrong_Q, modify_q_delta), FPR(Q, wrong_Q, modify_q_gamma)]
-                            metric = {}
-                            metric['pmr'] = pmr
-                            metric['amr'] = amr
-                            metric['tpr'] = tpr
-                            metric['fpr'] = fpr
-                            metric['time'] = [t2-t1, t3-t2, t4-t3]
+                            # metric = {}
+                            # metric['pmr'] = pmr
+                            # metric['amr'] = amr
+                            # metric['tpr'] = tpr
+                            # metric['fpr'] = fpr
+                            # metric['time'] = [t2-t1, t3-t2, t4-t3]
                             # metric_set[f"data{index}_{student}_{skills}_{items}_{prob}_{wrong}_{quality}_{mode}"] = metric
-                            metric_mode[f"{mode}"] = metric
+                            metric_mode[f"{mode}"] = {'pmr':pmr, 'amr':amr, 'tpr':tpr, 'fpr':fpr, 'time':[t2-t1, t3-t2, t4-t3]}
                         metric_quality[f"{quality}"] = metric_mode
                     metric_wrong[f"{wrong}"] = metric_quality
                 metric_prob[f"{prob}"] = metric_wrong
             metric_skill[f"{skills}_{items}"] = metric_prob
         metric_student_num[f"{student}"] = metric_skill
     metric_set[f"data{index}"] = metric_student_num
+    index += 1
 
 
 
@@ -119,16 +121,3 @@ with open('all_metrics.pkl', "wb") as f:
 
 
 
-
-
-
-
-
-
-
-
-
-# print('修改Q矩阵估计的PMR参数：', np.mean(pmr, axis=0))
-# print('修改Q矩阵估计的AMR参数：', np.mean(amr, axis=0))
-# print('修改Q矩阵估计的TPR参数：', np.mean(tpr, axis=0))
-# print('修改Q矩阵估计的FPR参数：', np.mean(fpr, axis=0))

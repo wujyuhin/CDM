@@ -27,7 +27,7 @@ class Delta():
         self.prob_num = prob_num
         self.know_num = know_num
         self.modify_q_m = q_m.copy()
-        self.epsilon = 0.05
+        self.epsilon = epsilon
         self.mode = mode  # 'inherit' or 'dependence'
 
     # ========================= 计算 delta ====================================
@@ -121,7 +121,7 @@ class Delta():
     def modify_qvector(self, item, epsilon):
         """
         修改题目item的q向量，且满足q(11)-q(1)>ε
-        :param item:  第j道题目
+        :param item:  第item道题目
         :param epsilon:  误差
         :return: 已修改对象的modify_q_m
         """

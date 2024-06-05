@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 import time
 from code_functions.data_generate.generate import generate_Q, generate_wrong_Q, generate_wrong_R, state_sample, attribute_pattern, state_answer
-from code_functions.model.hypothetical import Hypothetical
+from code_functions.model.hypothesis_skill import Hypothetical_skill as Hypothetical
 from code_functions.model.delta import Delta
 from code_functions.model.gamma import Gamma
 from code_functions.model.metric import PMR, AMR, TPR, FPR
@@ -20,13 +20,15 @@ np.random.seed(0)
 # sample_modes = ["uniform_mode", "normal", "assign"]
 # sample_modes_para = {"uniform_mode": None, "normal": [2, 1], "assign": 1}  # normal:均值为2，方差为1 assign:指定抽样只掌握2个知识点
 # 参数设置
-students = [1000]  # 生成学生数量
-skills_items_probs = [[4, 32, [[0.4, 0.5, 0.1, 0]]]]
-# skills_items_probs = [[3, 24, [[0.5, 0.3, 0.2], [0.2, 0.3, 0.5]]]]
-Q_wrong_rate = [0.1]  # 生成Q矩阵错误率
-qualities = [[0.1, 0.1]]  # 生成题目质量
-sample_modes = ["uniform_mode"]  # 生成抽样模式
-sample_modes_para = {"uniform_mode": None, "normal": [2, 0.5], "assign": 1}  # normal:均值为2，方差为1 assign:指定抽样只掌握2个知识点
+students = [200]  # 生成学生数量
+# skills_items_probs = [[4, 32, [[0.4, 0.4, 0.2, 0]]]]
+
+# skills_items_probs = [[4, 15, [[0.4, 0.4, 0.2, 0]]]]
+skills_items_probs = [[3, 24, [[0.3, 0.5, 0.3]]]]
+Q_wrong_rate = [0.2,0.2]  # 生成Q矩阵错误率
+qualities = [[0.2, 0.2]]  # 生成题目质量
+sample_modes = ["normal"]  # 生成抽样模式
+sample_modes_para = {"uniform_mode": None, "normal": [2, 1], "assign": 1}  # normal:均值为2，方差为1 assign:指定抽样只掌握2个知识点
 
 t1 = time.time()
 dataset = []
@@ -34,7 +36,7 @@ data = {}
 amr, pmr, tpr, fpr = [], [], [], []
 time_cost = []
 np.random.seed(0)
-for i in tqdm(range(1)):  # 每类数据生成1次
+for i in tqdm(range(20)):  # 每类数据生成1次
     for student in students:
         # t1 = time.time()
         for skills, items, probs in skills_items_probs:
@@ -56,14 +58,11 @@ for i in tqdm(range(1)):  # 每类数据生成1次
                                 states_samples = state_sample(states, num=student, method=mode,
                                                               mu_skills=sample_modes_para[mode][0],
                                                               sigma_skills=sample_modes_para[mode][1])
-                            elif mode == "assign":
-                                states_samples = state_sample(states, num=student, method=mode,
-                                                              set_skills=sample_modes_para[mode])
                             else:
                                 states_samples = state_sample(states, num=student, method=mode)  # 从掌握模式中抽样
                             answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples,Q=Q)  # 根据掌握模式生成作答情况
                             answer = generate_wrong_R(answer, wrong_rate=quality)['R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
-
+                            # ================================= hypothesis =================================
                             hypothesis_model = Hypothetical(q_m=wrong_Q, R=answer, stu_num=student, prob_num=items, know_num=skills)  # 实例化
                             modify_q_hypothesis = hypothesis_model.modify_Q(mode='loop', alpha=0.01)  # 循环修正Q矩阵
                             t2 = time.time()

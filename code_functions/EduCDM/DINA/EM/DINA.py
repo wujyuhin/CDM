@@ -67,7 +67,10 @@ class DINA(CDM):
             r_jl = np.dot(np.transpose(post), tmp_R)  # shape = (state_num, prob_num)
             r_jl_0, r_jl_1 = np.sum(r_jl * (1 - self.eta), axis=0), np.sum(r_jl * self.eta, axis=0)
             i_jl_0, i_jl_1 = np.sum(i_l * (1 - self.eta), axis=0), np.sum(i_l * self.eta, axis=0)
-            guess, slip = r_jl_0 / i_jl_0, (i_jl_1 - r_jl_1) / i_jl_1
+            try:
+                guess, slip = r_jl_0 / i_jl_0, (i_jl_1 - r_jl_1) / (i_jl_1 + 0.0000000000000000000000001)
+            except:
+                logging.error("divided by zero")
 
             change = max(np.max(np.abs(post - post_tmp)), np.max(np.abs(slip - slip_tmp)),
                          np.max(np.abs(guess - guess_tmp)))

@@ -37,12 +37,12 @@ class Hypothetical():
         cdm.train(epoch=2, epsilon=1e-3)
         g, s = cdm.guess, cdm.slip  # 题目的guess、slip参数
         # 对每一个Q向量(即每道题目)进行第一类错误的判断
-        flag = -1
+        # flag = -1
         for i in range(modify_q_m.shape[0]):
             # debug使用
-            flag +=1
-            if flag == 31:
-                print('debug')
+            # flag +=1
+            # if flag == 31:
+            #     print('debug')
             q0 = modify_q_m[i]  # 检验该第i道题目的q向量是否需要修正
             studs = cdm.all_states[cdm.theta, :]  # 获取所有学生的掌握模式
             studs_q0 = studs[np.all(studs == q0, axis=1), :]  # 获取该掌握模式q0的所有学生
@@ -52,11 +52,12 @@ class Hypothetical():
             answer_q0 = self.R[np.all(studs == q0, axis=1), :]  # 获取该掌握模式q0的所有学生的作答情况
             n = studs_q0.shape[0]  # 掌握模式q0的所有学生数
             r = n - np.sum(answer_q0[:, i])  # 掌握模式q0的所有学生其中做第i道题目做错的学生数
-            a = self.is_refuse(n, s[i], r, 0.01)
-            b = self.is_refuse(n, s[i], r, 0.05)
-            c = self.is_refuse(n, s[i], r, 0.1)
+            # a = self.is_refuse(n, s[i], r, 0.01)
+            # b = self.is_refuse(n, s[i], r, 0.05)
+            # c = self.is_refuse(n, s[i], r, 0.1)
             # H1:q≠q0 判断q向量是错误的
-            if self.is_refuse(n, s[i], r, alpha):
+            if is_refuse(n, s[i], r, alpha):
+            # if self.is_refuse(n, [g[i], s[i]], r, alpha):
                 # 如果拒绝原假设，则进行修正
                 q_up = q_up_down(q0)['q_up']
                 # 将up按考察知识点数量大小排序
@@ -69,10 +70,11 @@ class Hypothetical():
                         up_n = studs_q_up.shape[0]  # 掌握模式q_up的所有学生数
                         up_r = np.sum(answer_q_up[:, i])  # 其中做第i道题目做对的学生数
                         # H1:q=q_up 判断是否采取q_up的q向量作为修正q向量
-                        a = self.is_refuse(n, s[i], r, 0.01)
-                        b = self.is_refuse(n, s[i], r, 0.05)
-                        c = self.is_refuse(n, s[i], r, 0.1)
-                        if self.is_refuse(up_n, g[i], up_r, alpha):
+                        # a = self.is_refuse(n, s[i], r, 0.01)
+                        # b = self.is_refuse(n, s[i], r, 0.05)
+                        # c = self.is_refuse(n, s[i], r, 0.1)
+                        if is_refuse(up_n, 1-s[i], up_r, alpha):
+                        # if self.is_refuse(up_n, [g[i], s[i]], up_r, alpha):
                             modify_q_m[i] = q_up_item
                             break
             # H0:q=q0 判断q向量是正确的
@@ -86,7 +88,8 @@ class Hypothetical():
                         down_n = studs_q_down.shape[0]  # 掌握模式q_down的所有学生数
                         down_r = np.sum(answer_q_down[:, i])  # 其中做第i道题目做对的学生数
                         # H1:q=q_down 判断是否采取q_down的q向量作为修正q向量
-                        if self.is_refuse(down_n, g[i], down_r, alpha):
+                        if is_refuse(down_n, g[i], down_r, alpha):
+                        # if self.is_refuse(down_n, [g[i], s[i]], down_r, alpha):
                             modify_q_m[i] = q_down_item
                             break
         self.modify_q_m = modify_q_m
@@ -116,20 +119,28 @@ class Hypothetical():
         else:
             raise ValueError("mode should be 'loop' or 'no_loop'")
 
-    def is_refuse(self, n, p, r, alpha=0.05):
-        """
-        拒绝域判断
-        :param n:  试验次数
-        :param r:   拒绝域的上界
-        :param p:  原假设为真的情况下，二项分布的概率参数
-        :param alpha:  显著性水平
-        :return:  1表示拒绝原假设，0表示接受原假设
+def is_refuse(n, p, r, alpha=0.05):
+    """
+    拒绝域判断
+    :param n:  试验次数
+    :param r:   成功次数
+    :param p:  原假设为真的情况下，二项分布的概率参数
+    :param alpha:  显著性水平
+    :return:  1表示拒绝原假设，0表示接受原假设
 
-        example:
-        is_refuse(10, 0.5, 5, 0.05),表示在试验次数为10次，拒绝域的上界为5，原假设为真的概率为0.5，显著性水平为0.05的情况下，是否拒绝原假设
-        return 1
-        """
-        # 累计概率
+    example:
+    is_refuse(10, 0.5, 5, 0.05),表示在试验次数为10次，拒绝域的上界为5，原假设为真的概率为0.5，显著性水平为0.05的情况下，是否拒绝原假设
+    return 1
+    """
+    # 累计概率
+    if isinstance(p,list):
+        g = p[0]
+        s = p[1]
+        cumulate_p = 0
+        for i in range(r, n + 1):  # 注意Python的range不包括结束值，因此需要加1
+            cumulate_p += math.comb(n, i) * (g ** i) * (s ** (n - i))
+        return 1 if np.isclose(cumulate_p, alpha, atol=1e-9) or cumulate_p < alpha else 0
+    else:
         cumulate_p = 0
         for i in range(r, n + 1):  # 注意Python的range不包括结束值，因此需要加1
             cumulate_p += math.comb(n, i) * (p ** i) * ((1 - p) ** (n - i))

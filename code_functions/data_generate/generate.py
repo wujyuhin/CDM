@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import itertools
 from scipy.stats import norm
@@ -37,6 +39,8 @@ import pickle
 #     return all_states
 #
 # a = initial_all_knowledge_state(3)
+
+# 生成所有可能的掌握模式
 def attribute_pattern(skills):
     """
     基于k个属性生成2^k-1种掌握模式，返回除第一行外的所有模式（即去除全0模式）
@@ -72,12 +76,22 @@ def attribute_pattern_n(skills, n):
     return powerset[index]
 
 
-def generate_Q(items, skills, probs: list = None):
+def generate_Q(items, skills, probs: [list or str or float] = None):
     """
     生成Q矩阵的方法，skills表示属性个数，items表示题目个数，probs表示生成考察模式的概率
     :param items: 题目个数
     :param skills: 属性个数
-    :param probs: 指定生成考察模式的概率，probs的长度为K-1，probs的和应该小于1.默认为None,所有考察模式均匀分布
+    :param probs: 指定生成考察模式的概率，probs的和应该小于1.
+    1.默认为None,所有考察模式以均匀分布生成
+        如3个知识点的掌握模式有2^3-1=7种,，生成的Q矩阵中的每个元素都是随机生成的，probs=[1/7,1/7,1/7,1/7,1/7,1/7,1/7]
+    2.如果probs为一个浮点数，则生成每种考察模式的概率为[probs,probs,probs,...]
+        如3个知识点,probs=0.3，则自动转换成 probs=[0.3,0.3,0.3],考察一个属性的概率为0.3，考察两个属性的概率为0.3，考察三个属性的概率为0.3
+    3.如果probs为一个列表，则生成每种考察模式的概率为probs
+        如3个知识点,,probs=[0.3,0.5,0.2]，则考察一个属性的概率为0.3，考察两个属性的概率为0.5，考察三个属性的概率为0.2
+    4.如果probs为'single'，则返回所有可能的考察模式，即KS
+        如3个知识点的掌握模式有2^3-1=7种,则返回所有的7种掌握模式
+    5.如果probs为'frequency'，则返回所有掌握模式中掌握知识点的个数的频率，
+        如3个知识点的掌握模式有2^3-1=7种,掌握一个知识点的有3种，掌握两个知识点的有3种，掌握三个知识点的有1种
     example: items=10, skills=3. probs=[0.3,0.5,0.2]，则考察一个属性的概率为0.3，考察两个属性的概率为0.5，考察三个属性的概率为0.2
     result example:
     [[0 1 0]
@@ -91,12 +105,19 @@ def generate_Q(items, skills, probs: list = None):
      [0 1 1]
      [1 1 1]]
     """
+    KS = attribute_pattern(skills)  # 生成所有可能的考察模式
+    # 若probs为None，则生成随机抽取可能的考察模式组成Q矩阵
     if probs is None:
-        KS = attribute_pattern(skills)  # 生成所有可能的考察模式
         Q = np.zeros((items, skills))  # 初始化Q矩阵，生成 items 行 K列的全0矩阵
         while np.any(np.sum(Q, axis=0) == 0):
             Q = KS[np.random.choice(np.arange(1, KS.shape[0]), items, replace=True), :]
-    else:
+        return Q
+    # 若probs==single，则返回所有可能的考察模式，即KS
+    elif isinstance(probs, str) and probs == 'single':
+        return KS
+    # 若probs为一个浮点数，则生成每种考察模式的概率为[probs,probs,probs,...]，生成Q矩阵
+    # 若probs为一个列表，则生成每种考察模式的概率为probs，生成Q矩阵
+    elif isinstance(probs, (float, list)):
         probs = (np.array(probs) / np.sum(np.array(probs))) * items  # 将probs转换为数量
         probs = np.round(probs).astype(int)  # 将probs转换为整数
         # 如果probs的和大于items，则随机选一个有数的减到和为items
@@ -117,6 +138,31 @@ def generate_Q(items, skills, probs: list = None):
                 Q_mode.append(
                     KS[np.random.choice(np.arange(KS.shape[0]), int(probs[k - 1]), replace=True)])  # 生成考察k个属性的模式
             Q = np.concatenate(Q_mode, axis=0)
+        return Q
+    elif isinstance(probs, str) and probs == 'frequency':
+        KS_sample = np.array([]).reshape(0, skills)
+        for i in range(1, skills + 1):
+            # print(f"生成考察{i}个知识点的模式...")
+            KS_i = KS[np.where(np.sum(KS, axis=1) == i)]  # 生成考察i个知识点的模式
+            freq = KS_i.shape[0] / KS.shape[0]  # 计算考察i个知识点的模式的频率
+            # 保证要有至少一个考察i个知识点的模式
+            # ================================== 需要抽样之后查看是否<1,如果<1则向上取整，如果>1则向下取整 ==============================
+            sample_num = np.ceil(items * freq) if (freq < 1) and (freq - np.floor(freq) < 0.5) else np.floor(
+                items * freq)
+            index = np.random.choice(range(KS_i.shape[0]), int(sample_num), replace=True)
+            KS_sample = np.concatenate((KS_sample, KS_i[index]), axis=0)
+        # 如果抽样的数量小于items，则随机抽样补全
+        if KS_sample.shape[0] < items:
+            while KS_sample.shape[0] != items:
+                KS_sample = np.concatenate((KS_sample, KS[np.random.choice(range(KS.shape[0]), 1, replace=True)]),
+                                           axis=0)
+        # 如果抽样的数量大于items，则随机抽样减少
+        if KS_sample.shape[0] > items:
+            while KS_sample.shape[0] != items:
+                KS_sample = np.delete(KS_sample, np.random.choice(range(KS_sample.shape[0])), axis=0)
+        return KS_sample
+    else:
+        raise ValueError("probs参数输入错误！")
     # print(f"题目数量为{items}，属性数量为{skills},考察模式的概率为{probs}")
     # print("生成的Q矩阵为：")
     # for i in range(Q.shape[1]):
@@ -124,7 +170,6 @@ def generate_Q(items, skills, probs: list = None):
     # print("考察2个知识点的有", sum(np.sum(Q, axis=1) == 2), "个")
     # print("考察3个知识点的有", sum(np.sum(Q, axis=1) == 3), "个")
     # print(Q)
-    return Q
 
 
 def index_set(Q):
@@ -297,6 +342,7 @@ def state_sample(states, num, method: str = None, mu_skills: int = None, sigma_s
      [1 1]
      [1 0]]
     """
+    np.random.seed(0)
     if method is None:
         return states[np.random.choice(states.shape[0], num, replace=True)]
     elif method == "uniform_mode":
@@ -369,8 +415,29 @@ def state_sample(states, num, method: str = None, mu_skills: int = None, sigma_s
             raise ValueError("set_skills is None")
         states_i = states[np.sum(states, axis=1) == set_skills]
         return states_i[np.random.choice(states_i.shape[0], num, replace=True)]
+    elif method == "frequency":
+        KS_sample = np.array([]).reshape(0, states.shape[1])
+        for i in range(0, states.shape[1] + 1):
+            # print(f"生成考察{i}个知识点的模式...")
+            KS_i = states[np.where(np.sum(states, axis=1) == i)]  # 生成考察i个知识点的模式
+            freq = KS_i.shape[0] / states.shape[0]  # 计算考察i个知识点的模式的频率
+            # 保证要有至少一个考察i个知识点的模式
+            # ================================== 需要抽样之后查看是否<1,如果<1则向上取整，如果>1则向下取整 ==============================
+            sample_num = np.ceil(num * freq) if (freq < 1) and (freq - np.floor(freq) < 0.5) else np.floor(num * freq)
+            index = np.random.choice(range(KS_i.shape[0]), int(sample_num), replace=True)
+            KS_sample = np.concatenate((KS_sample, KS_i[index]), axis=0)
+        # 如果抽样的数量小于items，则随机抽样补全
+        if KS_sample.shape[0] < num:
+            while KS_sample.shape[0] != num:
+                KS_sample = np.concatenate(
+                    (KS_sample, KS_sample[np.random.choice(range(KS_sample.shape[0]), 1, replace=True)]), axis=0)
+        # 如果抽样的数量大于items，则随机抽样减少
+        if KS_sample.shape[0] > num:
+            while KS_sample.shape[0] != num:
+                KS_sample = np.delete(KS_sample, np.random.choice(range(KS_sample.shape[0])), axis=0)
+        return KS_sample
     else:
-        raise ValueError("method should be 'uniform' or 'normal' or 'assign'")
+        raise ValueError("method should be 'uniform_mode' or 'uniform_skill' or 'normal' or 'assign' or 'frequency'")
 
 
 def state_answer(state, Q):
@@ -397,8 +464,42 @@ def state_answer(state, Q):
     return np.array(answers)
 
 
+def state_answer_gs(state, Q, g, s):
+    """
+    根据掌握模式与Q矩阵生成作答矩阵R,和猜测参数g和失误参数s,根据如果state>=Q,则正确回答概率未 p = (1-s)**掌握 + s**不掌握,输出作答
+    :param state:  每一种掌握模式 1*skills [0,1,0,1]
+    :param Q: Q矩阵 items*skills
+    :param g: 猜测参数
+    :param s: 失误参数
+    :return: 输出items道题目的作答结果
+    """
+    answers = []
+    ran = []
+    for item in range(Q.shape[0]):
+        if sum(np.array(state) >= np.array(Q[item, :])) == len(state):
+            r1 = np.random.rand()
+            ran.append(r1)
+            if r1 < 1 - s:
+                answers.append(1)
+            else:
+                answers.append(0)
+        else:
+            r2 = np.random.rand()
+            ran.append(r2)
+            if r2 < g:
+                answers.append(1)
+            else:
+                answers.append(0)
+    return np.array(answers)
+
+
 # 对作答矩阵进行修正
 def generate_wrong_R(R, wrong_rate):
+    """
+    :param R:  作答矩阵
+    :param wrong_rate: 错误率(g,s),可以是一个列表，也可以是一个浮点数,如果是一个列表，则第一个元素表示0的错误率(0->1)，第二个元素表示1的错误率(1->0)
+    :return:
+    """
     if isinstance(wrong_rate, (float, int)):
         wrong_rate = [wrong_rate, wrong_rate]
     q_index = index_set(R)  # 生成Q矩阵中0或者1的所有坐标(x,y)
@@ -414,35 +515,39 @@ def generate_wrong_R(R, wrong_rate):
     for index in range(sum_errors_0):
         i, j = set_0[np.random.choice(range(len(set_0)))]
         R_wrong[i, j] = 1
-        # is_wrong[i, j] = True
-        wrong_set_01[index, :] = [i, j]
+        # wrong_set_01[index, :] = [i, j]
     # ================= 对R矩阵中的1元素进行修改 =================
     for index in range(sum_errors_1):
         i, j = set_1[np.random.choice(range(len(set_1)))]
         R_wrong[i, j] = 1 - R[i, j]
-        # is_wrong[i, j] = True
-        wrong_set_10[index, :] = [i, j]
-    return {'R': R, 'R_wrong': R_wrong,
-            'wrong_set_01': wrong_set_01, 'wrong_set_10': wrong_set_10}
+        # wrong_set_10[index, :] = [i, j]
+    # return {'R': R, 'R_wrong': R_wrong,
+    #         'wrong_set_01': wrong_set_01, 'wrong_set_10': wrong_set_10}
+    return {'R_wrong': R_wrong}
 
 
 if __name__ == '__main__':
+    # skills = 5
+    # items = 40
+    # Q = generate_Q(items, skills, probs='frequency')
     # 生成Q矩阵
-    # np.random.seed(0)
-    # skills = 3
-    # items = 8
-    # students = 300
-    # probs = [0.5,0.3,0.2]
-    # wrong = 0.05
-    # Q = generate_Q(items, skills, probs)
+    np.random.seed(0)
+    skills = 5
+    items = 40
+    students = 300
+    probs = [0.5, 0.3, 0.2, 0.1, 0]
+    wrong = 0.05
+    Q = generate_Q(items, skills, probs)
+    # # Q = generate_Q(items, skills, probs='frequency')
     # result = generate_wrong_Q(Q, wrong)
-    # # 正态分布抽样
-    # states = np.concatenate((np.zeros((1,skills)),attribute_pattern(skills)))
+    # # # 正态分布抽样
+    states = np.concatenate((np.zeros((1, skills)), attribute_pattern(skills)))
+    states_samples = state_sample(states, num=students, method="frequency")
     # states_samples = state_sample(states, num=students, method="normal", mu_skills=2,sigma_skills=0.7)  # 从掌握模式中抽样
     # print("===== 正态分布抽样 =====")
     # for i in range(states.shape[1]):
     #     print(f"正态掌握{i}个知识点的有{sum(np.sum(states_samples, axis=1) == i)}个")
-    # # 指定抽样
+    # 指定抽样
     # states_samples2 = state_sample(states, num=students, method="assign",set_skills=1)  # 从掌握模式中抽样
     # print("===== 指定抽样 =====")
     # for i in range(states.shape[1]):
@@ -461,68 +566,63 @@ if __name__ == '__main__':
     # answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 把arr中的每种模式都回答Q矩阵题目
     # answer = generate_wrong_R(answer, 0.1)['R_wrong']
 
-    np.random.seed(0)
-    students = [300, 500, 1000]  # 生成学生数量
-    skills_items_probs = [[3, 24, [[0.5, 0.3, 0.2], [0.2, 0.3, 0.5]]],
-                          [4, 32, [[0.2, 0.6, 0.2, 0], [0, 0.2, 0.6, 0.2]]]]
-    # [5,40,[[0.1, 0.4, 0.3, 0.2, 0],[0, 0.2, 0.3, 0.4, 0.1]]]
-    # ]  # 生成知识点数、题目数、知识点数量分布
-    Q_wrong_rate = [0.05, 0.1, 0.15]  # 生成Q矩阵错误率
-    # qualities = [[0.1 * i, 0.1 * j] for i in range(4) for j in range(4)]  # 生成题目质量
-    qualities = [[0, 0], [0.1, 0.1], [0.2, 0.2], [0.3, 0.3]]
-
-    sample_modes = ["uniform_mode", "normal", "assign"]
-    sample_modes_para = {"uniform_mode": None, "normal": [2, 1], "assign": 1}  # normal:均值为2，方差为1 assign:指定抽样只掌握2个知识点
-    t1 = time.time()
-    dataset = []
-    data = {}
-    for i in tqdm(range(100)):  # 每类数据生成1次
-        for student in students:
-            # t1 = time.time()
-            for skills, items, probs in skills_items_probs:
-                for prob in probs:
-                    for wrong in Q_wrong_rate:
-                        tt1 = time.time()
-                        for quality in qualities:
-                            # t1 = time.time()
-                            for mode in sample_modes:
-                                np.random.seed(0)
-                                Q = generate_Q(items, skills, probs=prob)  # 生成Q矩阵
-                                wrong_Q = generate_wrong_Q(Q, wrong)['Q_wrong']  # 生成错误率的Q矩阵
-                                states = np.concatenate(
-                                    (np.zeros((1, skills)), attribute_pattern(skills)))  # 所有学生掌握模式的可能情况
-                                if mode == "normal":
-                                    states_samples = state_sample(states, num=student, method=mode,
-                                                                  mu_skills=sample_modes_para[mode][0],
-                                                                  sigma_skills=sample_modes_para[mode][1])
-                                elif mode == "assign":
-                                    states_samples = state_sample(states, num=student, method=mode,
-                                                                  set_skills=sample_modes_para[mode])
-                                else:
-                                    states_samples = state_sample(states, num=student, method=mode)  # 从掌握模式中抽样
-                                answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples,
-                                                             Q=Q)  # 根据掌握模式生成作答情况
-                                answer = generate_wrong_R(answer, wrong_rate=quality)[
-                                    'R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
-                                data[f"{student}_{skills}_{items}_{prob}_{wrong}_{quality}_{mode}"] = {"Q": Q,
-                                                                                                       "Q_wrong": wrong_Q,
-                                                                                                       "states": states_samples,
-                                                                                                       "answer": answer}
-        dataset.append(data)
-
-    t2 = time.time()
-    t = t2 - t1
-    # 保留两位小数
-    print(f"生成数据集耗时{t / 60:.2f}分钟,合计{t / 3600:.2f}小时,共生成{len(dataset)}个数据集")
-
-    # 保存dataset
-    file_path = '../../data/dataset.pkl'
-    with open(file_path, "wb") as f:
-        pickle.dump(dataset, f)
+    # np.random.seed(0)
+    # students = [300, 500, 1000]  # 生成学生数量
+    # skills_items_probs = [[3, 24, [[0.5, 0.3, 0.2], [0.2, 0.3, 0.5]]],
+    #                       [4, 32, [[0.2, 0.6, 0.2, 0], [0, 0.2, 0.6, 0.2]]]]# 生成知识点数、题目数、知识点数量分布
+    # Q_wrong_rate = [0.05, 0.1, 0.15]  # 生成Q矩阵错误率
+    # qualities = [[0, 0], [0.1, 0.1], [0.2, 0.2]]  # 生成题目质量
+    # sample_modes = ["uniform_mode", "normal"]
+    # sample_modes_para = {"uniform_mode": None, "normal": [2, 1]}  # normal:均值为2，方差为1 assign:指定抽样只掌握2个知识点
+    # t1 = time.time()
+    # dataset = []
+    # data = {}
+    # index=0
+    # for i in tqdm(range(100)):  # 每类数据生成1次
+    #     for student in students:
+    #         # t1 = time.time()
+    #         for skills, items, probs in skills_items_probs:
+    #             for prob in probs:
+    #                 for wrong in Q_wrong_rate:
+    #                     for quality in qualities:
+    #                         for mode in sample_modes:
+    #                             np.random.seed(0)
+    #                             Q = generate_Q(items, skills, probs=prob)  # 生成Q矩阵
+    #                             wrong_Q = generate_wrong_Q(Q, wrong)['Q_wrong']  # 生成错误率的Q矩阵
+    #                             states = np.concatenate(
+    #                                 (np.zeros((1, skills)), attribute_pattern(skills)))  # 所有学生掌握模式的可能情况
+    #                             if mode == "normal":
+    #                                 states_samples = state_sample(states, num=student, method=mode,
+    #                                                               mu_skills=sample_modes_para[mode][0],
+    #                                                               sigma_skills=sample_modes_para[mode][1])
+    #                             elif mode == "assign":
+    #                                 states_samples = state_sample(states, num=student, method=mode,
+    #                                                               set_skills=sample_modes_para[mode])
+    #                             else:
+    #                                 states_samples = state_sample(states, num=student, method=mode)  # 从掌握模式中抽样
+    #                             answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples,
+    #                                                          Q=Q)  # 根据掌握模式生成作答情况
+    #                             answer = generate_wrong_R(answer, wrong_rate=quality)[
+    #                                 'R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
+    #                             data[f"data{index}_{student}_{skills}_{items}_{prob}_{wrong}_{quality}_{mode}"] = {
+    #                                 "Q": Q,
+    #                                 "Q_wrong": wrong_Q,
+    #                                 "states": states_samples,
+    #                                 "answer": answer}
+    #     index += 1
+    #     dataset.append(data)
+    #
+    # t2 = time.time()
+    # t = t2 - t1
+    # print(f"生成数据集耗时{t / 60:.2f}分钟,合计{t / 3600:.2f}小时,共生成{len(dataset)}个数据集")
+    # # 保存dataset
+    # file_path = '../../data/dataset_error.pkl'
+    # with open(file_path, "wb") as f:
+    #     pickle.dump(dataset, f)
 
     # 读取
-    with open(file_path, "rb") as f:
-        dataset_read = pickle.load(f)
+    # with open(file_path, "rb") as f:
+    #     dataset_read = pickle.load(f)
 
     # 测试读取数据的速度
     # t1 = time.time()

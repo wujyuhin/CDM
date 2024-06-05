@@ -163,6 +163,19 @@ class Gamma():
             self.modify_q_m = self.Smodify(k)
         return self.modify_q_m
 
+    # 只修改一道题目
+    def modify_qvector(self,item):
+        for k in range(self.know_num):
+            understand, disunderstand = self.divide(k)
+            if item in set(self.s_big):
+                if len(understand) == 0 or len(disunderstand) == 0:
+                    return self.modify_q_m
+                else:
+                    es = self.ES(understand, disunderstand, item)
+                    if es >= self.threshold_es:
+                        if self.modify_q_m[item, k] == 0:
+                            self.modify_q_m[item, k] = 1
+        return self.modify_q_m
 
 if __name__ == '__main__':
     # ============================  数据部分  ==========================================================

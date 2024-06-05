@@ -21,16 +21,18 @@ logging.getLogger().setLevel(logging.INFO)
 np.random.seed(0)
 skills = 3
 items = 24
-students = 1000
+students = 300
 quality = [0.2,0.2]
 amr, pmr, tpr, fpr = [], [], [], []
-for i in tqdm(range(10)):
+for i in tqdm(range(20)):
     wrong = 0.1
-    Q = generate_Q(items, skills, probs=[0.3, 0.3, 0.4])
+    # Q = generate_Q(items, skills, probs=[0.3, 0.3, 0.4])
+    Q = generate_Q(items, skills, probs="frequency")
     result = generate_wrong_Q(Q, wrong)
     wrong_Q = result['Q_wrong']
     states = np.concatenate((np.zeros((1,skills)),attribute_pattern(skills)))  # 所有学生掌握模式的可能情况
-    states_samples = state_sample(states, num=students, method="uniform_mode")  # 从掌握模式中抽样
+    states_samples = state_sample(states, num=students, method="frequency")  # 从掌握模式中抽样
+
     answer = np.apply_along_axis(state_answer, axis=1, arr=states_samples, Q=Q)  # 根据掌握模式生成作答情况
     answer = generate_wrong_R(answer, wrong_rate=quality)['R_wrong']  # 设置题目质量,高质量应该gs更小，低质量应该gs更大
     hypothesis_model = Hypothetical(q_m=wrong_Q, R=answer, stu_num=students, prob_num=items, know_num=skills)  # 实例化
