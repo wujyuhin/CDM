@@ -27,7 +27,7 @@ for q_wrong_rate in [0.05, 0.1, 0.15,0.2]:
     wrong_pmr, wrong_amr = [], []  # 错误Q矩阵的pmr,amr
     amr, pmr, tpr, fpr = [], [], [], []  # 修改Q矩阵的pmr,amr,tpr,fpr
     pmr_up, amr_up = [], []  # pmr,amr的提升比例
-    for i in tqdm(range(100), desc=f"Qwrong_rate_{q_wrong_rate},alpha为0.01,0.05,0.1"):
+    for i in tqdm(range(1), desc=f"Qwrong_rate_{q_wrong_rate},alpha为0.01,0.05,0.1"):
         np.random.seed(i)
         # 对于假设检验方法，置信度选择应该对统一标准的Q矩阵和R矩阵
         Q = generate_Q(items, skills, probs=prob)  # 生成Q矩阵

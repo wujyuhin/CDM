@@ -9,7 +9,8 @@ from codes.EduCDM import EMDINA as DINA
 
 
 def approx_binomial_probability_corrected(n, p, k):
-    # 计算二项分布的均值和标准差
+    """ 使用正态分布的连续性校正来近似二项分布的概率"""
+
     mean = n * p
     std_dev = (n * p * (1 - p)) ** 0.5
 

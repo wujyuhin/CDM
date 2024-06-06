@@ -3,9 +3,7 @@ import random
 import numpy as np
 import itertools
 from scipy.stats import norm
-from tqdm import tqdm
-import time
-import pickle
+
 
 """
 想要生成不同类型的Q矩阵
